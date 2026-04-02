@@ -30,8 +30,6 @@ unset($_SESSION['error']);
         <form action="../api/auth.php?action=login" method="POST">
             <input type="hidden" name="csrf_token" value="<?php echo esc(csrf_token()); ?>">
 
-        <form action="../actions/login_process.php" method="POST">
-
             <div class="input-group">
                 <label>Email Address</label>
                 <input type="email" name="email" placeholder="Enter your email" required>
@@ -45,16 +43,9 @@ unset($_SESSION['error']);
 
             <div class="auth-options">
                 <div class="remember-me">
-                    <input type="checkbox" id="remember" name="remember">
-                    <label for="remember">Remember me</label>
-            
-            
-            <div class="auth-options">
-                <div class="remember-me">
                     <label>
                         <input type="checkbox" name="remember"> Remember me
                     </label>
-
                 </div>
                 <a href="#" class="forgot-link">Forgot Password?</a>
             </div>
