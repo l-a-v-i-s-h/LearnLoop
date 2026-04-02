@@ -1,0 +1,27 @@
+<nav class="sidebar">
+    <div class="nav-item <?php echo ($current_page == 'dashboard') ? 'active' : ''; ?>">
+        <a href="dashboard.php">
+            <span class="icon-box"><i class="fa-solid fa-house"></i></span> Dashboard
+        </a>
+    </div>
+    <div class="nav-item">
+        <a href="groups.php">
+            <span class="icon-box"><i class="fa-solid fa-earth-americas"></i></span> My Groups
+        </a>
+    </div>
+    <div class="nav-item">
+        <a href="notes.php">
+            <span class="icon-box"><i class="fa-solid fa-file-lines"></i></span> Shared Notes
+        </a>
+    </div>
+    <div class="nav-item">
+        <a href="forums.php">
+            <span class="icon-box"><i class="fa-solid fa-comments"></i></span> Academic Forums
+        </a>
+    </div>
+    <div class="nav-item">
+        <a href="account.php">
+            <span class="icon-box"><i class="fa-solid fa-user"></i></span> Account
+        </a>
+    </div>
+</nav>

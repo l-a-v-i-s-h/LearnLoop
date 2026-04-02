@@ -1,0 +1,185 @@
+/* RESET & LAYOUT LOCK */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Inter", sans-serif;
+  text-decoration: none !important; /* Removes all underlines */
+}
+
+html,
+body {
+  height: 100vh;
+  overflow: hidden; /* Removes the scroller */
+  background-color: #f4feff;
+}
+
+.dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* HEADER - 90px Height */
+.main-header {
+  background-color: #95c7ff;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  flex-shrink: 0;
+}
+
+.logo-section {
+  font-size: 40px;
+  font-weight: 400; /* Not bold */
+  color: #1e3a5f;
+}
+
+.logo-icon i {
+  color: #e4ff30;
+  margin: 0 5px;
+}
+
+.search-bar {
+  background: white;
+  border-radius: 12px;
+  padding: 10px 20px;
+  width: 40%;
+  display: flex;
+  align-items: center;
+}
+
+.search-bar input {
+  border: none;
+  outline: none;
+  margin-left: 10px;
+  width: 100%;
+  font-size: 16px;
+}
+
+/* MAIN CONTAINER */
+.app-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* SIDEBAR - 320px Width */
+.sidebar {
+  width: 320px;
+  background-color: #3371bc;
+  padding: 30px 20px;
+  flex-shrink: 0;
+}
+
+.nav-item a {
+  display: flex;
+  align-items: center;
+  color: white;
+  padding: 18px 25px;
+  border-radius: 15px;
+  margin-bottom: 12px;
+  font-size: 18px;
+  transition: background 0.2s;
+}
+
+.nav-item.active a {
+  background-color: #d6e9f8;
+  color: #1e3a5f;
+  font-weight: 600;
+}
+
+.icon-box {
+  margin-right: 15px;
+  width: 25px;
+  text-align: center;
+}
+
+/* CONTENT AREA */
+.main-content {
+  flex: 1;
+  padding: 50px 60px;
+  overflow-y: auto; /* Only this part scrolls if content is long */
+}
+
+.welcome-title {
+  font-size: 34px;
+  color: #1e3a5f;
+  margin-bottom: 45px;
+  font-weight: 600;
+}
+
+/* STATS GRID */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+  margin-bottom: 50px;
+}
+
+.stat-box {
+  background-color: #d6e9f8;
+  padding: 35px;
+  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  gap: 25px;
+}
+
+.stat-icon {
+  background: white;
+  width: 60px;
+  height: 60px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #1e3a5f;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #555;
+  display: block;
+  margin-bottom: 5px;
+}
+.stat-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: #1e3a5f;
+}
+
+/* FORUMS SECTION */
+.forums-section {
+  background-color: #eaf6ff;
+  padding: 45px;
+  border-radius: 30px;
+}
+
+.forums-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.forum-card {
+  background: white;
+  padding: 25px 35px;
+  border-radius: 20px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reply-pill {
+  background: #60a5fa;
+  color: white;
+  padding: 8px 20px;
+  border-radius: 25px;
+  font-size: 14px;
+}
