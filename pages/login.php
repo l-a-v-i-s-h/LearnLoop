@@ -1,8 +1,10 @@
+
 <?php
 require_once __DIR__ . '/../config/db.php';
 $error = $_SESSION['error'] ?? '';
 unset($_SESSION['error']);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -27,6 +29,9 @@ unset($_SESSION['error']);
 
         <form action="../api/auth.php?action=login" method="POST">
             <input type="hidden" name="csrf_token" value="<?php echo esc(csrf_token()); ?>">
+
+        <form action="../actions/login_process.php" method="POST">
+
             <div class="input-group">
                 <label>Email Address</label>
                 <input type="email" name="email" placeholder="Enter your email" required>
@@ -37,10 +42,19 @@ unset($_SESSION['error']);
                 <input type="password" name="password" placeholder="Enter your password" required>
             </div>
 
+
             <div class="auth-options">
                 <div class="remember-me">
                     <input type="checkbox" id="remember" name="remember">
                     <label for="remember">Remember me</label>
+            
+            
+            <div class="auth-options">
+                <div class="remember-me">
+                    <label>
+                        <input type="checkbox" name="remember"> Remember me
+                    </label>
+
                 </div>
                 <a href="#" class="forgot-link">Forgot Password?</a>
             </div>
