@@ -1,3 +1,10 @@
+
+<?php
+require_once __DIR__ . '/../config/db.php';
+$error = $_SESSION['error'] ?? '';
+unset($_SESSION['error']);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +21,15 @@
             <p class="tagline">Collaborative Learning Space</p>
         </div>
 
-        <form action="../actions/login_process.php" method="POST">
+        <?php if ($error !== ''): ?>
+            <div style="background:#fee; color:#900; padding:10px; border-radius:6px; margin-bottom:10px;">
+                <?php echo esc($error); ?>
+            </div>
+        <?php endif; ?>
+
+        <form action="../api/auth.php?action=login" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo esc(csrf_token()); ?>">
+
             <div class="input-group">
                 <label>Email Address</label>
                 <input type="email" name="email" placeholder="Enter your email" required>
@@ -24,8 +39,8 @@
                 <label>Password</label>
                 <input type="password" name="password" placeholder="Enter your password" required>
             </div>
-            
-            
+
+
             <div class="auth-options">
                 <div class="remember-me">
                     <label>

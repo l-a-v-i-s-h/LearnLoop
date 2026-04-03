@@ -1,3 +1,10 @@
+
+<?php
+require_once __DIR__ . '/../config/db.php';
+$error = $_SESSION['error'] ?? '';
+unset($_SESSION['error']);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +21,18 @@
             <p class="tagline">Create your account</p>
         </div>
 
+
+        <?php if ($error !== ''): ?>
+            <div style="background:#fee; color:#900; padding:10px; border-radius:6px; margin-bottom:10px;">
+                <?php echo esc($error); ?>
+            </div>
+        <?php endif; ?>
+
+        <form action="../api/auth.php?action=register" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo esc(csrf_token()); ?>">
+
         <form action="../actions/register_process.php" method="POST">
+
             <div class="input-group">
                 <label>Full Name</label>
                 <input type="text" name="fullname" placeholder="John Doe" required>
