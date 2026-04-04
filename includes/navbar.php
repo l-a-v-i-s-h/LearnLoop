@@ -9,7 +9,7 @@
             <span class="icon-box"><i class="fa-solid fa-earth-americas"></i></span> My Groups
         </a>
     </div>
-    <div class="nav-item">
+    <div class="nav-item <?php echo ($current_page == 'notes') ? 'active' : ''; ?>">
         <a href="notes.php">
             <span class="icon-box"><i class="fa-solid fa-file-lines"></i></span> Shared Notes
         </a>
