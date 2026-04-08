@@ -1,0 +1,54 @@
+.groups-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.create-btn {
+  background: #4a90e2;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* Group Card */
+.group-card {
+  background: #cfe3f3;
+  padding: 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.2s;
+  position: relative;
+}
+
+.group-card:hover {
+  transform: translateY(-3px);
+}
+
+.group-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #164870;
+}
+
+.group-meta {
+  font-size: 13px;
+  margin-top: 5px;
+  color: #164870;
+}
+
+.open-room {
+  margin-top: 15px;
+  display: inline-block;
+  font-weight: 500;
+  color: #164870;
+}
