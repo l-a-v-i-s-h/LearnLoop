@@ -54,7 +54,7 @@ $user = $_SESSION['user'];
 </div>
 
 
-<div class="modal-overlay" id="createModal">
+<div class="modal-overlay" id="createModal" hidden>
     <div class="modal-card">
         <div class="modal-header">
             <h2>Create Group</h2>
