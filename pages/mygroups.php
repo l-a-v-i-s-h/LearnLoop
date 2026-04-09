@@ -1,4 +1,7 @@
 <?php
+
+session_start();
+
 require_once __DIR__ . '/../config/db.php';
 
 if (!isset($_SESSION['user'])) {
@@ -55,6 +58,9 @@ $user = $_SESSION['user'];
 
 
 <div class="modal-overlay" id="createModal" hidden>
+
+<div class="modal-overlay" id="createModal">
+
     <div class="modal-card">
         <div class="modal-header">
             <h2>Create Group</h2>
