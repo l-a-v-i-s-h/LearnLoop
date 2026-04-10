@@ -4,8 +4,13 @@
             <span class="icon-box"><i class="fa-solid fa-house"></i></span> Dashboard
         </a>
     </div>
+
+    <div class="nav-item">
+        <a href="mygroups.php">
+
     <div class="nav-item <?php echo ($current_page == 'groups') ? 'active' : ''; ?>">
-        <a href="groups.php">
+        <a href="mygroups.php">
+
             <span class="icon-box"><i class="fa-solid fa-earth-americas"></i></span> My Groups
         </a>
     </div>
