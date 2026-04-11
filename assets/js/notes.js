@@ -1,6 +1,8 @@
 (function () {
   "use strict";
 
+  const API_URL = "../api/notes.php";
+
   // Empty by default so empty state is shown first.
   let notes = [];
 
@@ -40,6 +42,17 @@
     return months[d.getMonth()] + " " + d.getDate();
   }
 
+  function formatApiDate(dateText) {
+    if (!dateText) return "";
+
+    const parsed = new Date(String(dateText).replace(" ", "T"));
+    if (Number.isNaN(parsed.getTime())) {
+      return String(dateText);
+    }
+
+    return formatDate(parsed);
+  }
+
   function getExt(name) {
     const i = name.lastIndexOf(".");
     return i >= 0 ? name.slice(i + 1).toLowerCase() : "";
@@ -54,6 +67,77 @@
       .replace(/'/g, "&#39;");
   }
 
+  async function apiRequest(method, bodyObj) {
+    const options = {
+      method,
+      headers: {}
+    };
+
+    if (bodyObj) {
+      options.headers["Content-Type"] = "application/json";
+      options.body = JSON.stringify(bodyObj);
+    }
+
+    const response = await fetch(API_URL, options);
+
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (err) {
+      payload = null;
+    }
+
+    if (!response.ok || !payload || payload.success === false) {
+      const message = payload && payload.message ? payload.message : "Request failed.";
+      throw new Error(message);
+    }
+
+    return payload;
+  }
+
+  function parseNoteContent(rawContent) {
+    if (!rawContent || typeof rawContent !== "string") {
+      return { group: "-", sizeBytes: 0 };
+    }
+
+    try {
+      const obj = JSON.parse(rawContent);
+      return {
+        group: obj.group ? String(obj.group) : "-",
+        sizeBytes: Number(obj.sizeBytes) || 0
+      };
+    } catch (err) {
+      return {
+        group: rawContent,
+        sizeBytes: 0
+      };
+    }
+  }
+
+  function mapApiNoteToRow(note) {
+    const content = parseNoteContent(note.content || "");
+
+    return {
+      id: String(note.note_id || ""),
+      name: note.title || "Untitled",
+      group: content.group,
+      sizeBytes: content.sizeBytes,
+      date: formatApiDate(note.created_at)
+    };
+  }
+
+  async function loadNotes() {
+    try {
+      const payload = await apiRequest("GET");
+      notes = Array.isArray(payload.data) ? payload.data.map(mapApiNoteToRow) : [];
+      render();
+    } catch (err) {
+      alert(err.message || "Could not load notes.");
+      notes = [];
+      render();
+    }
+  }
+
   // ===== Render =====
   function render() {
     if (notes.length === 0) {
@@ -65,7 +149,7 @@
     emptyState.hidden = true;
 
     tableBody.innerHTML = notes.map(n => `
-      <div class="notes-row" data-id="${n.id}">
+      <div class="notes-row" data-id="${escapeHtml(n.id)}">
         <div class="col-name">
           <span class="fname" title="${escapeHtml(n.name)}">${escapeHtml(n.name)}</span>
         </div>
@@ -73,7 +157,10 @@
         <div class="col-size">${formatSize(n.sizeBytes)}</div>
         <div class="col-date">${escapeHtml(n.date)}</div>
         <div class="col-actions">
-          <button class="row-delete" data-action="delete" data-id="${n.id}" aria-label="Delete">
+          <button class="row-download" data-action="download" data-id="${escapeHtml(n.id)}" aria-label="Download">
+            <i class="fa-solid fa-download"></i>
+          </button>
+          <button class="row-delete" data-action="delete" data-id="${escapeHtml(n.id)}" aria-label="Delete">
             <i class="fa-solid fa-trash"></i>
           </button>
         </div>
@@ -120,31 +207,75 @@
     else targetGroup.classList.remove("selected");
   });
 
-  uploadForm.addEventListener("submit", (e) => {
+  uploadForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!targetGroup.value) { targetGroup.focus(); return; }
     if (!pendingFile) { fileChooserBtn.focus(); return; }
 
-    const newNote = {
-      id: Date.now(),
-      name: pendingFile.name,
+    const contentJson = JSON.stringify({
       group: targetGroup.value,
       sizeBytes: pendingFile.size,
-      date: formatDate(new Date()),
-      type: getExt(pendingFile.name),
-    };
-    notes.unshift(newNote);
-    render();
-    closeUploadPanel();
+      fileType: getExt(pendingFile.name)
+    });
+
+    try {
+      const payload = await apiRequest("POST", {
+        title: pendingFile.name,
+        content: contentJson
+      });
+
+      const created = payload.data || null;
+      if (created && created.note_id) {
+        notes.unshift(mapApiNoteToRow({
+          note_id: created.note_id,
+          title: created.title,
+          content: created.content,
+          created_at: new Date().toISOString().slice(0, 19).replace("T", " ")
+        }));
+        render();
+      } else {
+        await loadNotes();
+      }
+
+      closeUploadPanel();
+    } catch (err) {
+      alert(err.message || "Could not upload note.");
+    }
   });
 
   uploadCancel.addEventListener("click", closeUploadPanel);
+
+  //  Download flow //
+  tableBody.addEventListener("click", async (e) => {
+    const btn = e.target.closest('button[data-action="download"]');
+    if (!btn) return;
+    const id = String(btn.dataset.id || "");
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+
+    try {
+      const response = await fetch("../api/notes.php?action=download&note_id=" + encodeURIComponent(id));
+      if (!response.ok) throw new Error("Download failed");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = note.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.message || "Could not download file.");
+    }
+  });
 
   //  Delete flow // 
   tableBody.addEventListener("click", (e) => {
     const btn = e.target.closest('button[data-action="delete"]');
     if (!btn) return;
-    const id = Number(btn.dataset.id);
+    const id = String(btn.dataset.id || "");
     const note = notes.find(n => n.id === id);
     if (!note) return;
     pendingDeleteId = id;
@@ -158,12 +289,18 @@
   }
   deleteCancel.addEventListener("click", cancelDelete);
   deleteModalClose.addEventListener("click", cancelDelete);
-  deleteConfirm.addEventListener("click", () => {
+  deleteConfirm.addEventListener("click", async () => {
     if (pendingDeleteId == null) return;
-    notes = notes.filter(n => n.id !== pendingDeleteId);
-    pendingDeleteId = null;
-    deleteModal.hidden = true;
-    render();
+
+    try {
+      await apiRequest("DELETE", { note_id: pendingDeleteId });
+      notes = notes.filter(n => n.id !== pendingDeleteId);
+      pendingDeleteId = null;
+      deleteModal.hidden = true;
+      render();
+    } catch (err) {
+      alert(err.message || "Could not delete note.");
+    }
   });
 
   deleteModal.addEventListener("click", (e) => {
@@ -175,5 +312,5 @@
   });
 
   // Init
-  render();
+  loadNotes();
 })();
