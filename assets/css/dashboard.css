@@ -72,17 +72,25 @@ body {
   background-color: #3371bc;
   padding: 30px 20px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .nav-item a {
   display: flex;
   align-items: center;
   color: white;
-  padding: 18px 25px;
+  padding: 18px 22px;
   border-radius: 15px;
-  margin-bottom: 12px;
   font-size: 18px;
   transition: background 0.2s;
+  width: 100%;
+  min-height: 64px;
+}
+
+.nav-item a:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .nav-item.active a {
@@ -93,7 +101,8 @@ body {
 
 .icon-box {
   margin-right: 15px;
-  width: 25px;
+  width: 26px;
+  flex-shrink: 0;
   text-align: center;
 }
 
