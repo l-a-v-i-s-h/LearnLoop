@@ -1,4 +1,3 @@
-
 db = db.getSiblingDB("learnloop");
 
 db.createCollection("users", {

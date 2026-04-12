@@ -1,0 +1,341 @@
+.forum-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+  gap: 20px;
+}
+
+.forum-title {
+  font-size: 32px;
+  font-weight: 600;
+  color: #164870;
+  margin-bottom: 6px;
+}
+
+.forum-subtitle {
+  font-size: 14px;
+  color: #164870;
+  opacity: 0.7;
+}
+
+.ask-btn {
+  background: #164870;
+  color: #FFFFFF;
+  border: none;
+  padding: 12px 26px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.ask-btn:hover { background: #0f3555; }
+.ask-btn:active { transform: scale(0.98); }
+
+/* ===== Ask Question Panel ===== */
+.ask-panel {
+  background: #E7F5FE;
+  border-radius: 14px;
+  padding: 20px 22px;
+  margin-bottom: 22px;
+}
+
+.ask-panel[hidden] { display: none !important; }
+
+.ask-panel-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #164870;
+  letter-spacing: 0.6px;
+  margin-bottom: 14px;
+}
+
+.ask-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ask-field {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #cfe3f5;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #042130;
+  background: #FFFFFF;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.ask-field::placeholder { color: #94a3b8; }
+.ask-field:focus { border-color: #164870; }
+.ask-field:hover { border-color: #95c7ff; }
+
+.ask-textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+}
+
+.ask-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.btn-post,
+.btn-cancel-ask {
+  height: 40px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.btn-post {
+  background: #164870;
+  color: #FFFFFF;
+}
+.btn-post:hover { background: #0f3555; }
+
+.btn-cancel-ask {
+  background: #FFFFFF;
+  color: #164870;
+  border: 1px solid #cfe3f5;
+}
+.btn-cancel-ask:hover { background: #f8fbff; }
+
+.btn-post:active,
+.btn-cancel-ask:active { transform: scale(0.98); }
+
+/* ===== Questions List ===== */
+.questions-wrapper {
+  background: #E7F5FE;
+  border-radius: 18px;
+  padding: 22px 24px;
+}
+
+.questions-wrapper[hidden] { display: none !important; }
+
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.question-card {
+  background: #FFFFFF;
+  border: 1px solid #cfe3f5;
+  border-radius: 14px;
+  padding: 20px 22px;
+  transition: box-shadow 0.15s;
+}
+
+.question-card:hover { box-shadow: 0 4px 14px rgba(22, 72, 112, 0.08); }
+
+.q-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.q-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.q-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #164870;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+
+.q-description {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.q-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.q-meta .reply-count {
+  background: #E7F5FE;
+  color: #164870;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.q-toggle {
+  background: transparent;
+  border: 1px solid #cfe3f5;
+  color: #164870;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.q-toggle:hover {
+  background: #E7F5FE;
+  border-color: #95c7ff;
+}
+
+.q-toggle i { margin-left: 6px; font-size: 10px; }
+
+/* ===== Expanded Replies Section ===== */
+.q-body {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #E7F5FE;
+}
+
+.q-body[hidden] { display: none !important; }
+
+.replies-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #164870;
+  opacity: 0.75;
+  letter-spacing: 0.6px;
+  margin-bottom: 12px;
+}
+
+.replies-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.reply-item {
+  background: #f8fbff;
+  border-left: 3px solid #95c7ff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #042130;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.no-replies {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+  margin-bottom: 14px;
+}
+
+.reply-form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.reply-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #cfe3f5;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #042130;
+  background: #FFFFFF;
+  outline: none;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 40px;
+  line-height: 1.4;
+}
+
+.reply-input::placeholder { color: #94a3b8; }
+.reply-input:focus { border-color: #164870; }
+
+.btn-reply {
+  height: 40px;
+  padding: 0 16px;
+  background: #164870;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.15s, transform 0.1s;
+  flex-shrink: 0;
+}
+
+.btn-reply:hover { background: #0f3555; }
+.btn-reply:active { transform: scale(0.98); }
+
+/* ===== Empty State ===== */
+.forum-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 30px;
+  text-align: center;
+  max-width: 566px;
+  margin: 40px auto 0;
+  border: 2px solid #cfe3f5;
+  border-radius: 18px;
+  background: #FFFFFF;
+}
+
+.forum-empty[hidden] { display: none !important; }
+
+.forum-empty .empty-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #E7F5FE;
+  color: #164870;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  margin-bottom: 18px;
+}
+
+.forum-empty .empty-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #042130;
+  margin-bottom: 8px;
+}
+
+.forum-empty .empty-text {
+  font-size: 14px;
+  color: #042130;
+  opacity: 0.6;
+  max-width: 380px;
+}
