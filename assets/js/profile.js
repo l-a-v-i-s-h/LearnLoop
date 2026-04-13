@@ -11,3 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }, 3000);
 });
+    if (profileForm) profileForm.addEventListener('submit', showToast);
+    if (passwordForm) passwordForm.addEventListener('submit', showToast);
+});``
+
