@@ -118,3 +118,58 @@ function handle_register_process(): void
     header('Location: ../pages/login.php');
     exit;
 }
+
+function handle_profile_update_process(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    if (!isset($_SESSION['user']['user_id'])) {
+        header('Location: ../pages/login.php');
+        exit;
+    }
+
+    $userId = $_SESSION['user']['user_id'];
+    $currentEmail = (string) ($_SESSION['user']['email'] ?? '');
+    $fullName = trim((string) ($_POST['full_name'] ?? ''));
+    $email = trim((string) ($_POST['email'] ?? ''));
+
+    if ($fullName === '') {
+        $_SESSION['error'] = 'Please enter your full name.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    if ($email !== '' && $email !== $currentEmail) {
+        $_SESSION['error'] = 'Email cannot be changed.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    $users = db()->selectCollection('users');
+
+    try {
+        $result = $users->updateOne(
+            ['user_id' => $userId],
+            ['$set' => ['full_name' => $fullName]]
+        );
+    } catch (MongoDB\Driver\Exception\Exception $e) {
+        $_SESSION['error'] = 'Profile update failed.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    if ($result->getMatchedCount() === 0) {
+        $_SESSION['error'] = 'User not found.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    $_SESSION['user']['full_name'] = $fullName;
+    $_SESSION['success'] = 'Profile updated successfully.';
+
+    header('Location: ../pages/profile.php');
+    exit;
+}

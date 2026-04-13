@@ -16,61 +16,40 @@ $commentsCollection = db()->selectCollection('comments');
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $apiAction = trim((string) ($_GET['action'] ?? ''));
 
-switch ($requestMethod) {
-	case 'POST':
-		if ($apiAction === 'comment') {
-			create_comment($postsCollection, $commentsCollection);
-		} else {
-			create_post($postsCollection);
-		}
-		exit;
-
-	case 'GET':
-		get_posts($postsCollection, $commentsCollection);
-		exit;
-
-	case 'PUT':
-	case 'PATCH':
-		if ($apiAction === 'comment') {
-			update_comment($commentsCollection);
-		} else {
-			update_post($postsCollection);
-		}
-		exit;
-
-	case 'DELETE':
-		if ($apiAction === 'comment') {
-			delete_comment($commentsCollection);
-		} else {
-			delete_post($postsCollection, $commentsCollection);
-		}
-		exit;
-
-	default:
-		respond_error(405);
-		exit;
+$handler = null;
+if ($requestMethod === 'POST') {
+	$handler = $apiAction === 'comment'
+		? fn() => create_comment($postsCollection, $commentsCollection)
+		: fn() => create_post($postsCollection);
+} elseif ($requestMethod === 'GET') {
+	$handler = fn() => get_posts($postsCollection, $commentsCollection);
+} elseif ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+	$handler = $apiAction === 'comment'
+		? fn() => update_comment($commentsCollection)
+		: fn() => update_post($postsCollection);
+} elseif ($requestMethod === 'DELETE') {
+	$handler = $apiAction === 'comment'
+		? fn() => delete_comment($commentsCollection)
+		: fn() => delete_post($postsCollection, $commentsCollection);
 }
+
+if ($handler === null) {
+	respond_error(405);
+	exit;
+}
+
+$handler();
+exit;
 
 function create_post($postsCollection): void
 {
 	$body = get_request_body();
 
-	$title = trim((string) ($body['title'] ?? ''));
-	$content = trim((string) ($body['description'] ?? ($body['content'] ?? '')));
-	$groupId = trim((string) ($body['group_id'] ?? 'general'));
+	$title = body_value($body, 'title');
+	$content = first_body_value($body, ['description', 'content']);
+	$groupId = body_value($body, 'group_id', 'general');
 
-	if ($title === '' || $content === '') {
-		respond_error(422);
-		return;
-	}
-
-	if (strlen($title) > 150) {
-		respond_error(422);
-		return;
-	}
-
-	if (strlen($content) > 5000) {
-		respond_error(422);
+	if (!require_value($title) || !require_value($content) || !require_max_len($title, 150) || !require_max_len($content, 5000)) {
 		return;
 	}
 
@@ -78,13 +57,12 @@ function create_post($postsCollection): void
 		$groupId = 'general';
 	}
 
-	if (strlen($groupId) > 60) {
-		respond_error(422);
+	if (!require_max_len($groupId, 60)) {
 		return;
 	}
 
 	$postId = bin2hex(random_bytes(8));
-	$userId = $_SESSION['user']['user_id'];
+	$userId = current_user_id();
 	$now = new MongoDB\BSON\UTCDateTime();
 
 	try {
@@ -124,16 +102,10 @@ function create_comment($postsCollection, $commentsCollection): void
 {
 	$body = get_request_body();
 
-	$postId = trim((string) ($body['post_id'] ?? ''));
-	$content = trim((string) ($body['content'] ?? ''));
+	$postId = body_value($body, 'post_id');
+	$content = body_value($body, 'content');
 
-	if ($postId === '' || $content === '') {
-		respond_error(422);
-		return;
-	}
-
-	if (strlen($content) > 1000) {
-		respond_error(422);
+	if (!require_value($postId) || !require_value($content) || !require_max_len($content, 1000)) {
 		return;
 	}
 
@@ -150,7 +122,7 @@ function create_comment($postsCollection, $commentsCollection): void
 	}
 
 	$commentId = bin2hex(random_bytes(8));
-	$userId = $_SESSION['user']['user_id'];
+	$userId = current_user_id();
 	$now = new MongoDB\BSON\UTCDateTime();
 
 	try {
@@ -180,20 +152,14 @@ function update_comment($commentsCollection): void
 {
 	$body = get_request_body();
 
-	$commentId = trim((string) ($body['comment_id'] ?? ($_GET['comment_id'] ?? '')));
-	$content = trim((string) ($body['content'] ?? ''));
+	$commentId = input_value($body, 'comment_id');
+	$content = body_value($body, 'content');
 
-	if ($commentId === '' || $content === '') {
-		respond_error(422);
+	if (!require_value($commentId) || !require_value($content) || !require_max_len($content, 1000)) {
 		return;
 	}
 
-	if (strlen($content) > 1000) {
-		respond_error(422);
-		return;
-	}
-
-	$userId = $_SESSION['user']['user_id'];
+	$userId = current_user_id();
 
 	try {
 		$result = $commentsCollection->updateOne(
@@ -227,14 +193,13 @@ function update_comment($commentsCollection): void
 function delete_comment($commentsCollection): void
 {
 	$body = get_request_body();
-	$commentId = trim((string) ($body['comment_id'] ?? ($_GET['comment_id'] ?? '')));
+	$commentId = input_value($body, 'comment_id');
 
-	if ($commentId === '') {
-		respond_error(422);
+	if (!require_value($commentId)) {
 		return;
 	}
 
-	$userId = $_SESSION['user']['user_id'];
+	$userId = current_user_id();
 
 	try {
 		$result = $commentsCollection->deleteOne([
@@ -306,9 +271,8 @@ function update_post($postsCollection): void
 {
 	$body = get_request_body();
 
-	$postId = trim((string) ($body['post_id'] ?? ($_GET['post_id'] ?? '')));
-	if ($postId === '') {
-		respond_error(422);
+	$postId = input_value($body, 'post_id');
+	if (!require_value($postId)) {
 		return;
 	}
 
@@ -324,45 +288,34 @@ function update_post($postsCollection): void
 	$updateData = [];
 
 	if ($titleProvided) {
-		$title = trim((string) ($body['title'] ?? ''));
-		if ($title === '') {
-			respond_error(422);
-			return;
-		}
-		if (strlen($title) > 150) {
-			respond_error(422);
+		$title = body_value($body, 'title');
+		if (!require_value($title) || !require_max_len($title, 150)) {
 			return;
 		}
 		$updateData['title'] = $title;
 	}
 
 	if ($contentProvided) {
-		$content = trim((string) ($body['description'] ?? ($body['content'] ?? '')));
-		if ($content === '') {
-			respond_error(422);
-			return;
-		}
-		if (strlen($content) > 5000) {
-			respond_error(422);
+		$content = first_body_value($body, ['description', 'content']);
+		if (!require_value($content) || !require_max_len($content, 5000)) {
 			return;
 		}
 		$updateData['content'] = $content;
 	}
 
 	if ($groupProvided) {
-		$groupId = trim((string) ($body['group_id'] ?? ''));
+		$groupId = body_value($body, 'group_id');
 		if ($groupId === '') {
 			$groupId = 'general';
 		}
-		if (strlen($groupId) > 60) {
-			respond_error(422);
+		if (!require_max_len($groupId, 60)) {
 			return;
 		}
 		$updateData['group_id'] = $groupId;
 	}
 
 	$updateData['updated_at'] = new MongoDB\BSON\UTCDateTime();
-	$userId = $_SESSION['user']['user_id'];
+	$userId = current_user_id();
 
 	try {
 		$result = $postsCollection->updateOne(
@@ -390,14 +343,13 @@ function update_post($postsCollection): void
 function delete_post($postsCollection, $commentsCollection): void
 {
 	$body = get_request_body();
-	$postId = trim((string) ($body['post_id'] ?? ($_GET['post_id'] ?? '')));
+	$postId = input_value($body, 'post_id');
 
-	if ($postId === '') {
-		respond_error(422);
+	if (!require_value($postId)) {
 		return;
 	}
 
-	$userId = $_SESSION['user']['user_id'];
+	$userId = current_user_id();
 
 	try {
 		$post = $postsCollection->findOne([
@@ -543,5 +495,55 @@ function wants_json_response(): bool
 
 	$requestedWith = strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '');
 	return $requestedWith === 'xmlhttprequest';
+}
+
+function current_user_id(): string
+{
+	return (string) ($_SESSION['user']['user_id'] ?? '');
+}
+
+function body_value(array $body, string $key, string $default = ''): string
+{
+	return trim((string) ($body[$key] ?? $default));
+}
+
+function first_body_value(array $body, array $keys, string $default = ''): string
+{
+	foreach ($keys as $key) {
+		if (array_key_exists($key, $body)) {
+			return trim((string) $body[$key]);
+		}
+	}
+
+	return trim($default);
+}
+
+function input_value(array $body, string $key, string $default = ''): string
+{
+	if (array_key_exists($key, $body)) {
+		return trim((string) $body[$key]);
+	}
+
+	return trim((string) ($_GET[$key] ?? $default));
+}
+
+function require_value(string $value): bool
+{
+	if ($value !== '') {
+		return true;
+	}
+
+	respond_error(422);
+	return false;
+}
+
+function require_max_len(string $value, int $max): bool
+{
+	if (strlen($value) <= $max) {
+		return true;
+	}
+
+	respond_error(422);
+	return false;
 }
 ?>
