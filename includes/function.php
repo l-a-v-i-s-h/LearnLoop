@@ -8,14 +8,8 @@ function handle_login_process(): void
         exit;
     }
 
-    $token = clean_text($_POST['csrf_token'] ?? '');
-    if (!csrf_check($token)) {
-        $_SESSION['error'] = 'Invalid CSRF token.';
-        header('Location: ../pages/login.php');
-        exit;
-    }
-
-    $email = clean_email($_POST['email'] ?? '');
+    $emailRaw = trim((string) ($_POST['email'] ?? ''));
+    $email = filter_var($emailRaw, FILTER_VALIDATE_EMAIL) ? $emailRaw : '';
     $password = $_POST['password'] ?? '';
 
     if ($email === '' || $password === '') {
@@ -51,15 +45,9 @@ function handle_register_process(): void
         exit;
     }
 
-    $token = clean_text($_POST['csrf_token'] ?? '');
-    if (!csrf_check($token)) {
-        $_SESSION['error'] = 'Invalid CSRF token.';
-        header('Location: ../pages/register.php');
-        exit;
-    }
-
-    $fullname = clean_text($_POST['fullname'] ?? '');
-    $email = clean_email($_POST['email'] ?? '');
+    $fullname = trim((string) ($_POST['fullname'] ?? ''));
+    $emailRaw = trim((string) ($_POST['email'] ?? ''));
+    $email = filter_var($emailRaw, FILTER_VALIDATE_EMAIL) ? $emailRaw : '';
     $password = $_POST['password'] ?? '';
 
     if ($fullname === '' || $email === '' || $password === '') {
