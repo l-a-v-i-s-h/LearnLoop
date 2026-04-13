@@ -58,15 +58,6 @@
     return i >= 0 ? name.slice(i + 1).toLowerCase() : "";
   }
 
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
   async function apiRequest(method, bodyObj) {
     const options = {
       method,
@@ -149,18 +140,18 @@
     emptyState.hidden = true;
 
     tableBody.innerHTML = notes.map(n => `
-      <div class="notes-row" data-id="${escapeHtml(n.id)}">
+      <div class="notes-row" data-id="${n.id}">
         <div class="col-name">
-          <span class="fname" title="${escapeHtml(n.name)}">${escapeHtml(n.name)}</span>
+          <span class="fname" title="${n.name}">${n.name}</span>
         </div>
-        <div class="col-group">${escapeHtml(n.group)}</div>
+        <div class="col-group">${n.group}</div>
         <div class="col-size">${formatSize(n.sizeBytes)}</div>
-        <div class="col-date">${escapeHtml(n.date)}</div>
+        <div class="col-date">${n.date}</div>
         <div class="col-actions">
-          <button class="row-download" data-action="download" data-id="${escapeHtml(n.id)}" aria-label="Download">
+          <button class="row-download" data-action="download" data-id="${n.id}" aria-label="Download">
             <i class="fa-solid fa-download"></i>
           </button>
-          <button class="row-delete" data-action="delete" data-id="${escapeHtml(n.id)}" aria-label="Delete">
+          <button class="row-delete" data-action="delete" data-id="${n.id}" aria-label="Delete">
             <i class="fa-solid fa-trash"></i>
           </button>
         </div>
