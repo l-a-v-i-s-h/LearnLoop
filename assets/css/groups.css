@@ -48,39 +48,44 @@
 .groups-grid {
   margin-top: 20px;
   display: grid;
-  grid-template-columns: repeat(2, 473px);
-  gap: 25px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  padding: 0;
 }
 
 .group-card {
-  width: 473px;
-  height: 264px;
+  height: 200px;
   background: #c7ddea;
-  padding: 20px;
+  padding: 24px;
   border-radius: 12px;
   cursor: pointer;
+  transition: transform 0.2s ease;
 
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  min-height: 180px;
 }
 
 .group-card:hover {
-  transform: scale(1.02);
+  transform: translateY(-5px);;
 }
 
 .group-card h3 {
-  color: #164870;
+  color: #3a76a7;
   font-size: 18px;
   font-weight: 600;
 }
 
 .group-card p {
   font-size: 14px;
-  color: #164870;
+  color: #3a76a7;
+  margin-top: 8px;
+  flex-grow: 1;
 }
 
 .group-card span {
   font-weight: 500;
-  color: #164870;
+  color: #3a76a7;
+  font-size: 18px;
 }
