@@ -13,4 +13,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (profileForm) profileForm.addEventListener('submit', showToast);
     if (passwordForm) passwordForm.addEventListener('submit', showToast);
-});
+});``
