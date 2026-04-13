@@ -20,7 +20,7 @@
         </a>
     </div>
     <div class="nav-item <?php echo ($current_page == 'account') ? 'active' : ''; ?>">
-        <a href="account.php">
+        <a href="profile.php">
             <span class="icon-box"><i class="fa-solid fa-user"></i></span> Account
         </a>
     </div>
