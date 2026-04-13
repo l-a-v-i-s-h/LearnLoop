@@ -1,54 +1,86 @@
+.page-title {
+  color: #164870;
+}
+
 .groups-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 25px;
 }
 
 .create-btn {
-  background: #4a90e2;
+  background: #5fa0e0;
   color: white;
   border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
   cursor: pointer;
+}
+
+.create-form {
+  display: none;
+  margin-top: 15px;
+  background: #dbe7f3;
+  padding: 15px;
+  border-radius: 10px;
+  gap: 10px;
+  align-items: center;
+}
+
+.create-form input {
+  padding: 8px;
+  border-radius: 6px;
+  border: none;
+}
+
+.create-form button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.create-form button:first-child {
+  background: #5fa0e0;
+  color: white;
 }
 
 .groups-grid {
+  margin-top: 20px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(2, 473px);
+  gap: 25px;
 }
 
-/* Group Card */
 .group-card {
-  background: #cfe3f3;
+  width: 473px;
+  height: 264px;
+  background: #c7ddea;
   padding: 20px;
   border-radius: 12px;
   cursor: pointer;
-  transition: 0.2s;
-  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .group-card:hover {
-  transform: translateY(-3px);
+  transform: scale(1.02);
 }
 
-.group-title {
-  font-size: 16px;
+.group-card h3 {
+  color: #164870;
+  font-size: 18px;
   font-weight: 600;
+}
+
+.group-card p {
+  font-size: 14px;
   color: #164870;
 }
 
-.group-meta {
-  font-size: 13px;
-  margin-top: 5px;
-  color: #164870;
-}
-
-.open-room {
-  margin-top: 15px;
-  display: inline-block;
+.group-card span {
   font-weight: 500;
   color: #164870;
 }

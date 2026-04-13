@@ -1,69 +1,57 @@
 const groupsGrid = document.getElementById("groupsGrid");
-const emptyState = document.getElementById("emptyState");
-
-const createModal = document.getElementById("createModal");
-const openBtn = document.getElementById("openCreateModal");
-const closeBtn = document.getElementById("closeCreateModal");
 const form = document.getElementById("createForm");
+const toggleBtn = document.getElementById("toggleFormBtn");
 
 let groups = [
-  { id: 1, name: "Modern Web Arch", subject: "CS", members: 12, active: 4 },
-  { id: 2, name: "Data Structures", subject: "CS", members: 8, active: 2 },
-  { id: 3, name: "Math Analysis", subject: "Math", members: 12, active: 3 },
+  { name: "Modern Web Arch", members: 12, active: 4 },
+  { name: "Data Structures", members: 8, active: 2 },
+  { name: "Math Analysis", members: 12, active: 3 }
 ];
 
-// Render
-function renderGroups() {
-  if (!groups.length) {
-    groupsGrid.style.display = "none";
-    emptyState.style.display = "block";
-    return;
+function toggleForm() {
+  if (form.style.display === "none" || form.style.display === "") {
+    form.style.display = "flex";
+  } else {
+    form.style.display = "none";
   }
-
-  emptyState.style.display = "none";
-  groupsGrid.style.display = "grid";
-
-  groupsGrid.innerHTML = groups.map(g => `
-    <div class="group-card" onclick="openGroup('${g.name}')">
-      <div class="group-title">${g.name}</div>
-      <div class="group-meta">${g.members} members · ${g.active} active</div>
-      <div class="open-room">Open Room →</div>
-    </div>
-  `).join("");
 }
 
-// Modal
-openBtn.onclick = () => createModal.classList.add("active");
-closeBtn.onclick = () => createModal.classList.remove("active");
+toggleBtn.addEventListener("click", toggleForm);
 
-createModal.onclick = (e) => {
-  if (e.target === createModal) closeBtn.click();
-};
-
-// Create group
-form.onsubmit = (e) => {
-  e.preventDefault();
-
+function createGroup() {
   const name = document.getElementById("groupName").value;
   const subject = document.getElementById("groupSubject").value;
 
+  if (!name || !subject) {
+    alert("Fill all fields");
+    return;
+  }
+
   groups.push({
-    id: Date.now(),
     name,
-    subject,
     members: 1,
     active: 1
   });
 
-  form.reset();
-  closeBtn.click();
-  renderGroups();
-};
+  document.getElementById("groupName").value = "";
+  document.getElementById("groupSubject").value = "";
 
-// Open group
-function openGroup(name) {
-  alert("Opening " + name);
+  renderGroups();
+  toggleForm();
 }
 
-// Init
+function renderGroups() {
+  groupsGrid.innerHTML = groups.map(g => `
+    <div class="group-card" onclick="openGroup('${g.name}')">
+      <h3>${g.name}</h3>
+      <p>${g.members} members • ${g.active} active</p>
+      <span>Open Room →</span>
+    </div>
+  `).join("");
+}
+
+function openGroup(name) {
+  window.location.href = "chatroom.php?group=" + encodeURIComponent(name);
+}
+
 renderGroups();
