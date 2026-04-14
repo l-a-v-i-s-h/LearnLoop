@@ -2,12 +2,14 @@
   "use strict";
 
   const API_URL = "../api/notes.php";
+  const GROUP_API_URL = "../api/group.php";
 
   // Empty by default so empty state is shown first.
   let notes = [];
 
   let pendingFile = null;
   let pendingDeleteId = null;
+  let groups = [];
 
   // ===== DOM =====
   const tableWrapper = document.getElementById("notesTableWrapper");
@@ -129,6 +131,51 @@
     }
   }
 
+  async function loadGroups() {
+    try {
+      const response = await fetch(GROUP_API_URL);
+      const payload = await response.json();
+
+      groups = payload && payload.success && Array.isArray(payload.data)
+        ? payload.data
+        : [];
+
+      renderGroupOptions();
+    } catch (err) {
+      groups = [];
+      renderGroupOptions();
+    }
+  }
+
+  function renderGroupOptions() {
+    const currentValue = targetGroup.value;
+
+    const options = ['<option value="">Select group</option>'];
+    groups.forEach((g) => {
+      const name = String(g.group_name || "").trim();
+      if (!name) return;
+      options.push('<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</option>');
+    });
+
+    targetGroup.innerHTML = options.join("");
+
+    if (currentValue && groups.some(g => String(g.group_name || "").trim() === currentValue)) {
+      targetGroup.value = currentValue;
+      targetGroup.classList.add("selected");
+    } else {
+      targetGroup.value = "";
+      targetGroup.classList.remove("selected");
+    }
+
+    if (groups.length === 0) {
+      targetGroup.disabled = true;
+      targetGroup.innerHTML = '<option value="">No groups available</option>';
+      targetGroup.classList.add("selected");
+    } else {
+      targetGroup.disabled = false;
+    }
+  }
+
   // ===== Render =====
   function render() {
     if (notes.length === 0) {
@@ -200,6 +247,7 @@
 
   uploadForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (groups.length === 0) { alert("Please create a group first."); return; }
     if (!targetGroup.value) { targetGroup.focus(); return; }
     if (!pendingFile) { fileChooserBtn.focus(); return; }
 
@@ -303,5 +351,6 @@
   });
 
   // Init
+  loadGroups();
   loadNotes();
 })();
