@@ -60,6 +60,15 @@
     return i >= 0 ? name.slice(i + 1).toLowerCase() : "";
   }
 
+  function escapeHtml(value) {
+    return String(value || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
   async function apiRequest(method, bodyObj) {
     const options = {
       method,

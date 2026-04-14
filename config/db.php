@@ -14,4 +14,20 @@ function db()
 
 	return $client->selectDatabase('learnloop');
 }
+
+if (!function_exists('esc')) {
+	function esc($value): string
+	{
+		return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+	}
+}
+
+if (!function_exists('clean_text')) {
+	function clean_text($value): string
+	{
+		$text = trim((string) $value);
+		$text = strip_tags($text);
+		return preg_replace('/\s+/', ' ', $text) ?? '';
+	}
+}
 ?>
