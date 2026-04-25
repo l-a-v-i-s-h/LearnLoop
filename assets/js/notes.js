@@ -3,6 +3,11 @@
 
   const API_URL = "../api/notes.php";
   const GROUP_API_URL = "../api/group.php";
+  const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+  const csrfInput = document.querySelector('input[name="_csrf_token"]');
+  const csrfToken = csrfTokenMeta
+    ? csrfTokenMeta.getAttribute("content") || ""
+    : (csrfInput ? csrfInput.value || "" : "");
 
   // Empty by default so empty state is shown first.
   let notes = [];
@@ -77,6 +82,7 @@
 
     if (bodyObj) {
       options.headers["Content-Type"] = "application/json";
+      options.headers["X-CSRF-Token"] = csrfToken;
       options.body = JSON.stringify(bodyObj);
     }
 
@@ -198,11 +204,11 @@
     tableBody.innerHTML = notes.map(n => `
       <div class="notes-row" data-id="${n.id}">
         <div class="col-name">
-          <span class="fname" title="${n.name}">${n.name}</span>
+          <span class="fname" title="${escapeHtml(n.name)}">${escapeHtml(n.name)}</span>
         </div>
-        <div class="col-group">${n.group}</div>
+        <div class="col-group">${escapeHtml(n.group)}</div>
         <div class="col-size">${formatSize(n.sizeBytes)}</div>
-        <div class="col-date">${n.date}</div>
+        <div class="col-date">${escapeHtml(n.date)}</div>
         <div class="col-actions">
           <button class="row-download" data-action="download" data-id="${n.id}" aria-label="Download">
             <i class="fa-solid fa-download"></i>
@@ -302,7 +308,11 @@
     if (!note) return;
 
     try {
-      const response = await fetch("../api/notes.php?action=download&note_id=" + encodeURIComponent(id));
+      const response = await fetch("../api/notes.php?action=download&note_id=" + encodeURIComponent(id), {
+        headers: {
+          "X-CSRF-Token": csrfToken
+        }
+      });
       if (!response.ok) throw new Error("Download failed");
       
       const blob = await response.blob();

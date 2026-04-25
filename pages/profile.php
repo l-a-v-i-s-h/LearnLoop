@@ -21,6 +21,7 @@ $current_page = 'profile';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo esc(csrf_token()); ?>">
     <title>LearnLoop | Account Settings</title>
     <link rel="stylesheet" href="../assets/css/style.css">
      <link rel="stylesheet" href="../assets/css/dashboard.css">
@@ -39,13 +40,13 @@ $current_page = 'profile';
 
             <?php if ($successMessage !== ''): ?>
                 <div class="profile-message success-message">
-                    <?php echo $successMessage; ?>
+                    <?php echo esc($successMessage); ?>
                 </div>
             <?php endif; ?>
 
             <?php if ($errorMessage !== ''): ?>
                 <div class="profile-message error-message">
-                    <?php echo $errorMessage; ?>
+                    <?php echo esc($errorMessage); ?>
                 </div>
             <?php endif; ?>
 
@@ -53,13 +54,14 @@ $current_page = 'profile';
                 <section class="settings-card">
                     <h2>Profile Information</h2>
                     <form id="profileForm" action="../api/auth.php?action=profile-update" method="POST">
+                        <?php echo csrf_input(); ?>
                         <div class="form-group">
                             <label>Display Name</label>
-                            <input type="text" name="full_name" value="<?php echo $fullName; ?>" placeholder="Enter your name" required>
+                            <input type="text" name="full_name" value="<?php echo esc($fullName); ?>" placeholder="Enter your name" required>
                         </div>
                         <div class="form-group">
                             <label>Email Address</label>
-                            <input type="email" name="email" value="<?php echo $email; ?>" readonly>
+                            <input type="email" name="email" value="<?php echo esc($email); ?>" readonly>
                         </div>
                         <button type="submit" class="btn-settings">Save Changes</button>
                     </form>

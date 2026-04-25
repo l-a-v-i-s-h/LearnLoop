@@ -14,6 +14,7 @@ $user = $_SESSION['user'];
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?php echo esc(csrf_token()); ?>">
     <title>LearnLoop | My Groups</title>
 
     <link rel="stylesheet" href="../assets/css/style.css">

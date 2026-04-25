@@ -13,6 +13,24 @@ $userId = $_SESSION['user']['user_id'];
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $body = read_body();
 
+if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+	$token = '';
+	if (!empty($_POST['_csrf_token'])) {
+		$token = clean_text($_POST['_csrf_token']);
+	} elseif (!empty($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+		$token = clean_text($_SERVER['HTTP_X_CSRF_TOKEN']);
+	}
+
+	if (!csrf_check($token)) {
+		http_response_code(419);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Invalid CSRF token.'
+		]);
+		exit;
+	}
+}
+
 if ($method === 'POST') {
 	$name = clean_text($body['group_name'] ?? ($body['name'] ?? ''));
 	$subject = clean_text($body['subject'] ?? '');
@@ -138,4 +156,6 @@ function respond(int $code, bool $ok, string $message, $data = null): void
 	}
 	echo json_encode($out);
 }
+
+
 ?>
