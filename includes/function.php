@@ -1,6 +1,13 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
 
+function csrf_fail(string $redirect): void
+{
+    $_SESSION['error'] = 'Invalid request token. Please try again.';
+    header('Location: ' . $redirect);
+    exit;
+}
+
 function handle_login_process(): void
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -8,9 +15,13 @@ function handle_login_process(): void
         exit;
     }
 
-    $emailRaw = trim((string) ($_POST['email'] ?? ''));
-    $email = filter_var($emailRaw, FILTER_VALIDATE_EMAIL) ? $emailRaw : '';
-    $password = $_POST['password'] ?? '';
+    $token = clean_text($_POST['_csrf_token'] ?? '');
+    if (!csrf_check($token)) {
+        csrf_fail('../pages/login.php');
+    }
+
+    $email = clean_email($_POST['email'] ?? '');
+    $password = (string) ($_POST['password'] ?? '');
 
     if ($email === '' || $password === '') {
         $_SESSION['error'] = 'Please enter email and password.';
@@ -45,9 +56,13 @@ function handle_register_process(): void
         exit;
     }
 
-    $fullname = trim((string) ($_POST['fullname'] ?? ''));
-    $emailRaw = trim((string) ($_POST['email'] ?? ''));
-    $email = filter_var($emailRaw, FILTER_VALIDATE_EMAIL) ? $emailRaw : '';
+    $token = clean_text($_POST['_csrf_token'] ?? '');
+    if (!csrf_check($token)) {
+        csrf_fail('../pages/register.php');
+    }
+
+    $fullname = safe_input($_POST['fullname'] ?? '', 100);
+    $email = clean_email($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
     if ($fullname === '' || $email === '' || $password === '') {
@@ -76,15 +91,8 @@ function handle_register_process(): void
         $username = 'user';
     }
 
-    $baseUsername = $username;
-    $counter = 0;
-    while ($users->findOne(['username' => $username])) {
-        $counter++;
-        $username = $baseUsername . $counter;
-        if ($counter > 20) {
-            $username = $baseUsername . bin2hex(random_bytes(2));
-            break;
-        }
+    if ($users->findOne(['username' => $username])) {
+        $username = $username . bin2hex(random_bytes(2));
     }
 
     $userId = bin2hex(random_bytes(8));
@@ -100,16 +108,7 @@ function handle_register_process(): void
             'created_at' => new MongoDB\BSON\UTCDateTime(),
         ]);
     } catch (MongoDB\Driver\Exception\BulkWriteException $e) {
-        $writeErrors = $e->getWriteResult()->getWriteErrors();
-        $detail = $writeErrors ? $writeErrors[0]->getMessage() : $e->getMessage();
-        $info = ($writeErrors && method_exists($writeErrors[0], 'getInfo'))
-            ? $writeErrors[0]->getInfo()
-            : null;
-        if ($info) {
-            $detail .= ' ' . json_encode($info);
-        }
-
-        $_SESSION['error'] = 'Registration failed. ' . $detail;
+        $_SESSION['error'] = 'Registration failed. Please try again.';
         header('Location: ../pages/register.php');
         exit;
     }
@@ -126,6 +125,11 @@ function handle_profile_update_process(): void
         exit;
     }
 
+    $token = clean_text($_POST['_csrf_token'] ?? '');
+    if (!csrf_check($token)) {
+        csrf_fail('../pages/profile.php');
+    }
+
     if (!isset($_SESSION['user']['user_id'])) {
         header('Location: ../pages/login.php');
         exit;
@@ -133,8 +137,8 @@ function handle_profile_update_process(): void
 
     $userId = $_SESSION['user']['user_id'];
     $currentEmail = (string) ($_SESSION['user']['email'] ?? '');
-    $fullName = trim((string) ($_POST['full_name'] ?? ''));
-    $email = trim((string) ($_POST['email'] ?? ''));
+    $fullName = safe_input($_POST['full_name'] ?? '', 100);
+    $email = safe_input($_POST['email'] ?? '', 150);
 
     if ($fullName === '') {
         $_SESSION['error'] = 'Please enter your full name.';

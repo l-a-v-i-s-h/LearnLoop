@@ -25,7 +25,7 @@ $current_page = 'dashboard';
         <?php include '../includes/navbar.php'; ?>
 
         <main class="main-content">
-            <h1 class="welcome-title" style="font-size: 34px; color: #1e3a5f; margin-bottom: 40px;">Welcome, <?php echo $_SESSION['user']['full_name']; ?></h1>
+            <h1 class="welcome-title" style="font-size: 34px; color: #1e3a5f; margin-bottom: 40px;">Welcome, <?php echo esc($_SESSION['user']['full_name'] ?? 'Student'); ?></h1>
 
             <div class="stats-row">
                 <div class="stat-box">

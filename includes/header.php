@@ -15,6 +15,11 @@
             </div>
             <span>Student</span>
         </div>
-        <a href="logout.php"><i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 22px; color: #1e3a5f;"></i></a>
+        <form action="logout.php" method="POST" style="margin: 0;">
+            <?php echo csrf_input(); ?>
+            <button type="submit" aria-label="Logout" style="background: none; border: 0; padding: 0; cursor: pointer; color: #1e3a5f;">
+                <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 22px;"></i>
+            </button>
+        </form>
     </div>
 </header>

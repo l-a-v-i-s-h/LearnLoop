@@ -15,6 +15,24 @@ if (!isset($_SESSION['user'])) {
 $notesCollection = db()->selectCollection('notes');
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
+if (in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+	$token = '';
+	if (!empty($_POST['_csrf_token'])) {
+		$token = clean_text($_POST['_csrf_token']);
+	} elseif (!empty($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+		$token = clean_text($_SERVER['HTTP_X_CSRF_TOKEN']);
+	}
+
+	if (!csrf_check($token)) {
+		http_response_code(419);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Invalid CSRF token.'
+		]);
+		exit;
+	}
+}
+
 if ($requestMethod === 'POST') {
 	create_note($notesCollection);
 	exit;
@@ -45,32 +63,14 @@ function create_note($notesCollection): void
 {
 	$body = get_request_body();
 
-	$title = trim((string) ($body['title'] ?? ''));
-	$content = trim((string) ($body['content'] ?? ''));
+	$title = safe_input($body['title'] ?? '', 120);
+	$content = safe_input($body['content'] ?? '', 5000);
 
 	if ($title === '' || $content === '') {
 		http_response_code(422);
 		echo json_encode([
 			'success' => false,
 			'message' => 'Title and content are required.'
-		]);
-		return;
-	}
-
-	if (strlen($title) > 120) {
-		http_response_code(422);
-		echo json_encode([
-			'success' => false,
-			'message' => 'Title must be 120 characters or less.'
-		]);
-		return;
-	}
-
-	if (strlen($content) > 5000) {
-		http_response_code(422);
-		echo json_encode([
-			'success' => false,
-			'message' => 'Content must be 5000 characters or less.'
 		]);
 		return;
 	}
@@ -162,7 +162,7 @@ function get_notes($notesCollection): void
 function delete_note($notesCollection): void
 {
 	$body = get_request_body();
-	$noteId = trim((string) ($body['note_id'] ?? ($_GET['note_id'] ?? '')));
+	$noteId = safe_input($body['note_id'] ?? ($_GET['note_id'] ?? ''), 80);
 
 	if ($noteId === '') {
 		http_response_code(422);
@@ -206,7 +206,7 @@ function delete_note($notesCollection): void
 
 function download_note($notesCollection): void
 {
-	$noteId = trim((string) ($_GET['note_id'] ?? ''));
+	$noteId = safe_input($_GET['note_id'] ?? '', 80);
 
 	if ($noteId === '') {
 		http_response_code(422);
@@ -302,3 +302,4 @@ function format_mongo_date($value): string
 
 	return '';
 }
+
