@@ -73,8 +73,9 @@
 .groups-grid {
   margin-top: 20px;
   display: grid;
-  grid-template-columns: repeat(2, 473px);
-  gap: 25px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  padding: 0;
 }
 
 .groups-empty {
@@ -123,16 +124,22 @@
 }
 
 .group-card {
-  width: 473px;
-  height: 264px;
+  height: 200px;
   background: #c7ddea;
+  padding: 24px;
   padding: 28px;
   border-radius: 12px;
   cursor: pointer;
+  transition: transform 0.2s ease;
 
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  min-height: 180px;
+}
+
+.group-card:hover {
+  transform: translateY(-5px);;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   box-shadow: 0 2px 8px rgba(22, 72, 112, 0.08);
 }
@@ -143,7 +150,7 @@
 }
 
 .group-card h3 {
-  color: #164870;
+  color: #3a76a7;
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 12px;
@@ -159,6 +166,9 @@
 
 .group-card p {
   font-size: 14px;
+  color: #3a76a7;
+  margin-top: 8px;
+  flex-grow: 1;
   color: #164870;
   margin: 0;
 }
@@ -179,6 +189,8 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
+  color: #3a76a7;
+  font-size: 18px;
   font-family: inherit;
   box-shadow: 0 2px 6px rgba(22, 72, 112, 0.08);
   transition: background 0.15s, box-shadow 0.15s;
