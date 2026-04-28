@@ -15,6 +15,24 @@ if (!isset($_SESSION['user'])) {
 $chatCollection = db()->selectCollection('chat_messages');
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
+if (in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+	$token = '';
+	if (!empty($_POST['_csrf_token'])) {
+		$token = clean_text($_POST['_csrf_token']);
+	} elseif (!empty($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+		$token = clean_text($_SERVER['HTTP_X_CSRF_TOKEN']);
+	}
+
+	if (!csrf_check($token)) {
+		http_response_code(419);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Invalid CSRF token.'
+		]);
+		exit;
+	}
+}
+
 if ($requestMethod === 'GET') {
 	get_messages($chatCollection);
 	exit;
@@ -114,11 +132,38 @@ function post_message($chatCollection): void
 
 	if (!empty($_FILES['file']) && is_uploaded_file($_FILES['file']['tmp_name'])) {
 		$upload = $_FILES['file'];
+		if (($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+			http_response_code(422);
+			echo json_encode([
+				'success' => false,
+				'message' => 'File upload failed.'
+			]);
+			return;
+		}
+
+		if (!is_allowed_chat_upload((string) ($upload['name'] ?? ''))) {
+			http_response_code(422);
+			echo json_encode([
+				'success' => false,
+				'message' => 'Unsupported file type.'
+			]);
+			return;
+		}
+
+		if ((int) ($upload['size'] ?? 0) <= 0 || (int) ($upload['size'] ?? 0) > 26214400) {
+			http_response_code(422);
+			echo json_encode([
+				'success' => false,
+				'message' => 'File size must be 25 MB or less.'
+			]);
+			return;
+		}
+
 		$safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($upload['name']));
 		$storedName = time() . '-' . bin2hex(random_bytes(4)) . '-' . $safeName;
 
 		$uploadDir = __DIR__ . '/../uploads/chat/' . $userId;
-		if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true) && !is_dir($uploadDir)) {
+		if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
 			http_response_code(500);
 			echo json_encode([
 				'success' => false,
@@ -344,3 +389,11 @@ function format_mongo_date($value): string
 	}
 	return '';
 }
+
+function is_allowed_chat_upload(string $fileName): bool
+{
+	$extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+	return in_array($extension, ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'png', 'jpg', 'jpeg'], true);
+}
+
+

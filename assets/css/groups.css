@@ -126,7 +126,12 @@
 .group-card {
   height: 200px;
   background: #c7ddea;
+<<<<<<< HEAD
   padding: 20px;
+=======
+  padding: 24px;
+  padding: 28px;
+>>>>>>> 2082ef430bfa75b9fdea186a704dfe05f7e8af5b
   border-radius: 12px;
   cursor: pointer;
   transition: transform 0.2s ease;
@@ -134,10 +139,25 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+<<<<<<< HEAD
 }
 
 .group-card:hover {
   transform: scale(1.02);
+=======
+  min-height: 180px;
+}
+
+.group-card:hover {
+  transform: translateY(-5px);;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(22, 72, 112, 0.08);
+}
+
+.group-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(22, 72, 112, 0.16);
+>>>>>>> 2082ef430bfa75b9fdea186a704dfe05f7e8af5b
 }
 
 .group-card h3 {
@@ -157,6 +177,12 @@
 
 .group-card p {
   font-size: 14px;
+<<<<<<< HEAD
+=======
+  color: #3a76a7;
+  margin-top: 8px;
+  flex-grow: 1;
+>>>>>>> 2082ef430bfa75b9fdea186a704dfe05f7e8af5b
   color: #164870;
 }
 
@@ -176,6 +202,108 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
+<<<<<<< HEAD
+=======
+  color: #3a76a7;
+  font-size: 18px;
+  font-family: inherit;
+  box-shadow: 0 2px 6px rgba(22, 72, 112, 0.08);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.action-open-room:hover {
+  background: #f0f9ff;
+  box-shadow: 0 4px 10px rgba(22, 72, 112, 0.12);
+}
+
+.action-delete {
+  background: transparent;
+  border: none;
+  color: #164870;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.action-delete:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 33, 48, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px;
+  padding: 28px 24px 22px;
+  text-align: center;
+}
+
+.delete-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #fef2f2;
+  color: #dc2626;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-bottom: 14px;
+}
+
+.modal-delete h2 {
+  color: #164870;
+  margin: 0 0 10px;
+  font-size: 24px;
+}
+
+.modal-delete p {
+  color: #164870;
+  opacity: 0.85;
+  margin: 0;
+}
+
+.delete-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.cancel-btn,
+.confirm-delete-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #e7f5fe;
+>>>>>>> 2082ef430bfa75b9fdea186a704dfe05f7e8af5b
   color: #164870;
 }
 

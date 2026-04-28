@@ -10,6 +10,7 @@ unset($_SESSION['error']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo esc(csrf_token()); ?>">
     <title>LearnLoop | Sign In</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -23,11 +24,12 @@ unset($_SESSION['error']);
 
         <?php if ($error !== ''): ?>
             <div style="background:#fee; color:#900; padding:10px; border-radius:6px; margin-bottom:10px;">
-                <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
+                <?php echo esc($error); ?>
             </div>
         <?php endif; ?>
 
         <form action="../api/auth.php?action=login" method="POST">
+            <?php echo csrf_input(); ?>
             <div class="input-group">
                 <label>Email Address</label>
                 <input type="email" name="email" placeholder="Enter your email" required>

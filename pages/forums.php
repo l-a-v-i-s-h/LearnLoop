@@ -13,6 +13,7 @@ $current_page = 'forums';
 
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?php echo esc(csrf_token()); ?>">
     <title>LearnLoop | Academic Forums</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/dashboard.css">
@@ -42,6 +43,7 @@ $current_page = 'forums';
             <div class="ask-panel" id="askPanel" hidden>
                 <div class="ask-panel-label">ASK QUESTION HERE</div>
                 <form id="askForm" class="ask-panel-body" action="../api/post.php" method="POST">
+                    <?php echo csrf_input(); ?>
                     <input type="text" id="questionTitle" name="title" class="ask-field" placeholder="Question title" maxlength="150" required>
 
                     <textarea id="questionDescription" name="description" class="ask-field ask-textarea" placeholder="Describe your question in detail..." rows="3" required></textarea>

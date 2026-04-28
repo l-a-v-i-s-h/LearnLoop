@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const groupName = chatBox ? (chatBox.dataset.group || 'General') : 'General';
     const currentUserId = chatBox ? (chatBox.dataset.userId || '') : '';
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta ? (csrfMeta.getAttribute('content') || '') : '';
     let activeInlineEdit = null;
     let skipOutsideCloseOnce = false;
     let pendingFile = null;
@@ -228,7 +230,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const response = await fetch('../api/chat.php', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
                 body: JSON.stringify({
                     message_id: messageId,
                     message: message
@@ -328,7 +333,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const response = await fetch('../api/chat.php', {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
                 body: JSON.stringify({ message_id: messageId })
             });
             const data = await response.json();
@@ -385,7 +393,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const response = await fetch('../api/chat.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
             body: JSON.stringify({
                 group: groupName,
                 message: message
@@ -417,6 +428,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const response = await fetch('../api/chat.php', {
             method: 'POST',
+            headers: {
+                'X-CSRF-Token': csrfToken
+            },
             body: formData
         });
 

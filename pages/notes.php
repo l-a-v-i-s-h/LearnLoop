@@ -12,6 +12,7 @@ $current_page = 'notes';
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?php echo esc(csrf_token()); ?>">
     <title>LearnLoop | Shared Notes</title>
     <?php $v = time(); ?>
     <link rel="stylesheet" href="../assets/css/style.css?v=<?php echo $v; ?>">

@@ -16,29 +16,57 @@ $commentsCollection = db()->selectCollection('comments');
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $apiAction = trim((string) ($_GET['action'] ?? ''));
 
-$handler = null;
-if ($requestMethod === 'POST') {
-	$handler = $apiAction === 'comment'
-		? fn() => create_comment($postsCollection, $commentsCollection)
-		: fn() => create_post($postsCollection);
-} elseif ($requestMethod === 'GET') {
-	$handler = fn() => get_posts($postsCollection, $commentsCollection);
-} elseif ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
-	$handler = $apiAction === 'comment'
-		? fn() => update_comment($commentsCollection)
-		: fn() => update_post($postsCollection);
-} elseif ($requestMethod === 'DELETE') {
-	$handler = $apiAction === 'comment'
-		? fn() => delete_comment($commentsCollection)
-		: fn() => delete_post($postsCollection, $commentsCollection);
+if (in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+	$token = '';
+	if (!empty($_POST['_csrf_token'])) {
+		$token = clean_text($_POST['_csrf_token']);
+	} elseif (!empty($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+		$token = clean_text($_SERVER['HTTP_X_CSRF_TOKEN']);
+	}
+
+	if (!csrf_check($token)) {
+		http_response_code(419);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Invalid CSRF token.'
+		]);
+		exit;
+	}
 }
 
-if ($handler === null) {
-	respond_error(405);
+if ($requestMethod === 'POST') {
+	if ($apiAction === 'comment') {
+		create_comment($postsCollection, $commentsCollection);
+	} else {
+		create_post($postsCollection);
+	}
 	exit;
 }
 
-$handler();
+if ($requestMethod === 'GET') {
+	get_posts($postsCollection, $commentsCollection);
+	exit;
+}
+
+if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+	if ($apiAction === 'comment') {
+		update_comment($commentsCollection);
+	} else {
+		update_post($postsCollection);
+	}
+	exit;
+}
+
+if ($requestMethod === 'DELETE') {
+	if ($apiAction === 'comment') {
+		delete_comment($commentsCollection);
+	} else {
+		delete_post($postsCollection, $commentsCollection);
+	}
+	exit;
+}
+
+respond_error(405);
 exit;
 
 function create_post($postsCollection): void
@@ -49,7 +77,7 @@ function create_post($postsCollection): void
 	$content = first_body_value($body, ['description', 'content']);
 	$groupId = body_value($body, 'group_id', 'general');
 
-	if (!require_value($title) || !require_value($content) || !require_max_len($title, 150) || !require_max_len($content, 5000)) {
+	if (!require_value($title) || !require_value($content) || !require_max_len($title, 150)) {
 		return;
 	}
 
@@ -297,7 +325,7 @@ function update_post($postsCollection): void
 
 	if ($contentProvided) {
 		$content = first_body_value($body, ['description', 'content']);
-		if (!require_value($content) || !require_max_len($content, 5000)) {
+		if (!require_value($content)) {
 			return;
 		}
 		$updateData['content'] = $content;
@@ -504,27 +532,27 @@ function current_user_id(): string
 
 function body_value(array $body, string $key, string $default = ''): string
 {
-	return trim((string) ($body[$key] ?? $default));
+	return safe_input($body[$key] ?? $default);
 }
 
 function first_body_value(array $body, array $keys, string $default = ''): string
 {
 	foreach ($keys as $key) {
 		if (array_key_exists($key, $body)) {
-			return trim((string) $body[$key]);
+			return safe_input($body[$key]);
 		}
 	}
 
-	return trim($default);
+	return safe_input($default);
 }
 
 function input_value(array $body, string $key, string $default = ''): string
 {
 	if (array_key_exists($key, $body)) {
-		return trim((string) $body[$key]);
+		return safe_input($body[$key], 150);
 	}
 
-	return trim((string) ($_GET[$key] ?? $default));
+	return safe_input($_GET[$key] ?? $default, 150);
 }
 
 function require_value(string $value): bool
@@ -546,4 +574,6 @@ function require_max_len(string $value, int $max): bool
 	respond_error(422);
 	return false;
 }
+
+
 ?>

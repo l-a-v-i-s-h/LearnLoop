@@ -2,6 +2,8 @@
   "use strict";
 
   const API_URL = "../api/post.php";
+  const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+  const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute("content") || "" : "";
 
   // Questions are loaded from backend.
   let questions = [];
@@ -37,6 +39,15 @@
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     return months[d.getMonth()] + " " + d.getDate();
+  }
+
+  function esc(value) {
+    return String(value || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
   }
 
   function toQuestion(post) {
@@ -84,7 +95,8 @@
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "X-CSRF-Token": csrfToken
       },
       body: JSON.stringify({
         title: title,
@@ -105,7 +117,8 @@
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "X-CSRF-Token": csrfToken
       },
       body: JSON.stringify({
         post_id: postId
@@ -129,7 +142,8 @@
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "X-CSRF-Token": csrfToken
       },
       body: JSON.stringify({
         post_id: postId,
@@ -155,7 +169,8 @@
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "X-CSRF-Token": csrfToken
       },
       body: JSON.stringify({
         post_id: postId,
@@ -186,7 +201,8 @@
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "X-CSRF-Token": csrfToken
       },
       body: JSON.stringify({
         post_id: postId,
@@ -212,7 +228,8 @@
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "X-CSRF-Token": csrfToken
       },
       body: JSON.stringify({
         post_id: postId,
@@ -254,7 +271,7 @@
         : `<div class="replies-list">
             ${q.replies.map(r => `
                 <div class="reply-item">
-                  <p class="reply-text">${r.text}</p>
+                  <p class="reply-text">${esc(r.text)}</p>
                   <div class="reply-actions">
                     <button type="button" class="q-link-action" data-action="edit-reply" data-id="${q.id}" data-reply-id="${r.id}" title="Edit reply" aria-label="Edit reply">
                       <i class="fa-solid fa-pen-to-square"></i>
@@ -281,11 +298,11 @@
         <div class="question-card" data-id="${q.id}">
           <div class="q-head">
             <div class="q-main">
-              <h3 class="q-title">${q.title}</h3>
-              <p class="q-description">${q.description}</p>
+              <h3 class="q-title">${esc(q.title)}</h3>
+              <p class="q-description">${esc(q.description)}</p>
               <div class="q-meta">
                 <span class="reply-count">${replyCount} ${replyCount === 1 ? "Reply" : "Replies"}</span>
-                <span>${q.date}</span>
+                <span>${esc(q.date)}</span>
               </div>
             </div>
             <div class="q-side-actions">
@@ -312,7 +329,7 @@
                 placeholder="Write a reply..."
                 rows="1"
                 required
-              >${replyTextValue}</textarea>
+              >${esc(replyTextValue)}</textarea>
               <button type="submit" class="btn-reply">${replySubmitLabel}</button>
               ${replyCancelHtml}
             </form>
