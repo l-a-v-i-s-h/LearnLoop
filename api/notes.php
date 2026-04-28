@@ -15,6 +15,24 @@ if (!isset($_SESSION['user'])) {
 $notesCollection = db()->selectCollection('notes');
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
+if (in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+	$token = '';
+	if (!empty($_POST['_csrf_token'])) {
+		$token = clean_text($_POST['_csrf_token']);
+	} elseif (!empty($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+		$token = clean_text($_SERVER['HTTP_X_CSRF_TOKEN']);
+	}
+
+	if (!csrf_check($token)) {
+		http_response_code(419);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Invalid CSRF token.'
+		]);
+		exit;
+	}
+}
+
 if ($requestMethod === 'POST') {
 	create_note($notesCollection);
 	exit;
@@ -45,8 +63,8 @@ function create_note($notesCollection): void
 {
 	$body = get_request_body();
 
-	$title = clean_text($body['title'] ?? '');
-	$content = clean_text($body['content'] ?? '');
+	$title = safe_input($body['title'] ?? '', 120);
+	$content = safe_input($body['content'] ?? '', 5000);
 
 	if ($title === '' || $content === '') {
 		http_response_code(422);
@@ -57,30 +75,12 @@ function create_note($notesCollection): void
 		return;
 	}
 
-	if (strlen($title) > 120) {
-		http_response_code(422);
-		echo json_encode([
-			'success' => false,
-			'message' => 'Title must be 120 characters or less.'
-		]);
-		return;
-	}
-
-	if (strlen($content) > 5000) {
-		http_response_code(422);
-		echo json_encode([
-			'success' => false,
-			'message' => 'Content must be 5000 characters or less.'
-		]);
-		return;
-	}
-
 	$noteId = bin2hex(random_bytes(8));
 	$userId = $_SESSION['user']['user_id'];
 	$decodedContent = json_decode($content, true);
 	$groupId = '';
 	if (is_array($decodedContent) && !empty($decodedContent['group'])) {
-		$groupId = clean_text((string) $decodedContent['group']);
+		$groupId = trim((string) $decodedContent['group']);
 	}
 	if ($groupId === '') {
 		$groupId = 'general';
@@ -162,7 +162,7 @@ function get_notes($notesCollection): void
 function delete_note($notesCollection): void
 {
 	$body = get_request_body();
-	$noteId = clean_text($body['note_id'] ?? ($_GET['note_id'] ?? ''));
+	$noteId = safe_input($body['note_id'] ?? ($_GET['note_id'] ?? ''), 80);
 
 	if ($noteId === '') {
 		http_response_code(422);
@@ -206,7 +206,7 @@ function delete_note($notesCollection): void
 
 function download_note($notesCollection): void
 {
-	$noteId = clean_text($_GET['note_id'] ?? '');
+	$noteId = safe_input($_GET['note_id'] ?? '', 80);
 
 	if ($noteId === '') {
 		http_response_code(422);
@@ -302,3 +302,4 @@ function format_mongo_date($value): string
 
 	return '';
 }
+

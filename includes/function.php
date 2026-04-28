@@ -1,6 +1,13 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
 
+function csrf_fail(string $redirect): void
+{
+    $_SESSION['error'] = 'Invalid request token. Please try again.';
+    header('Location: ' . $redirect);
+    exit;
+}
+
 function handle_login_process(): void
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -8,15 +15,13 @@ function handle_login_process(): void
         exit;
     }
 
-    $token = clean_text($_POST['csrf_token'] ?? '');
+    $token = clean_text($_POST['_csrf_token'] ?? '');
     if (!csrf_check($token)) {
-        $_SESSION['error'] = 'Invalid CSRF token.';
-        header('Location: ../pages/login.php');
-        exit;
+        csrf_fail('../pages/login.php');
     }
 
     $email = clean_email($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
+    $password = (string) ($_POST['password'] ?? '');
 
     if ($email === '' || $password === '') {
         $_SESSION['error'] = 'Please enter email and password.';
@@ -51,14 +56,12 @@ function handle_register_process(): void
         exit;
     }
 
-    $token = clean_text($_POST['csrf_token'] ?? '');
+    $token = clean_text($_POST['_csrf_token'] ?? '');
     if (!csrf_check($token)) {
-        $_SESSION['error'] = 'Invalid CSRF token.';
-        header('Location: ../pages/register.php');
-        exit;
+        csrf_fail('../pages/register.php');
     }
 
-    $fullname = clean_text($_POST['fullname'] ?? '');
+    $fullname = safe_input($_POST['fullname'] ?? '', 100);
     $email = clean_email($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
@@ -88,15 +91,8 @@ function handle_register_process(): void
         $username = 'user';
     }
 
-    $baseUsername = $username;
-    $counter = 0;
-    while ($users->findOne(['username' => $username])) {
-        $counter++;
-        $username = $baseUsername . $counter;
-        if ($counter > 20) {
-            $username = $baseUsername . bin2hex(random_bytes(2));
-            break;
-        }
+    if ($users->findOne(['username' => $username])) {
+        $username = $username . bin2hex(random_bytes(2));
     }
 
     $userId = bin2hex(random_bytes(8));
@@ -112,21 +108,72 @@ function handle_register_process(): void
             'created_at' => new MongoDB\BSON\UTCDateTime(),
         ]);
     } catch (MongoDB\Driver\Exception\BulkWriteException $e) {
-        $writeErrors = $e->getWriteResult()->getWriteErrors();
-        $detail = $writeErrors ? $writeErrors[0]->getMessage() : $e->getMessage();
-        $info = ($writeErrors && method_exists($writeErrors[0], 'getInfo'))
-            ? $writeErrors[0]->getInfo()
-            : null;
-        if ($info) {
-            $detail .= ' ' . json_encode($info);
-        }
-
-        $_SESSION['error'] = 'Registration failed. ' . $detail;
+        $_SESSION['error'] = 'Registration failed. Please try again.';
         header('Location: ../pages/register.php');
         exit;
     }
 
     $_SESSION['success'] = 'Account created. Please sign in.';
     header('Location: ../pages/login.php');
+    exit;
+}
+
+function handle_profile_update_process(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    $token = clean_text($_POST['_csrf_token'] ?? '');
+    if (!csrf_check($token)) {
+        csrf_fail('../pages/profile.php');
+    }
+
+    if (!isset($_SESSION['user']['user_id'])) {
+        header('Location: ../pages/login.php');
+        exit;
+    }
+
+    $userId = $_SESSION['user']['user_id'];
+    $currentEmail = (string) ($_SESSION['user']['email'] ?? '');
+    $fullName = safe_input($_POST['full_name'] ?? '', 100);
+    $email = safe_input($_POST['email'] ?? '', 150);
+
+    if ($fullName === '') {
+        $_SESSION['error'] = 'Please enter your full name.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    if ($email !== '' && $email !== $currentEmail) {
+        $_SESSION['error'] = 'Email cannot be changed.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    $users = db()->selectCollection('users');
+
+    try {
+        $result = $users->updateOne(
+            ['user_id' => $userId],
+            ['$set' => ['full_name' => $fullName]]
+        );
+    } catch (MongoDB\Driver\Exception\Exception $e) {
+        $_SESSION['error'] = 'Profile update failed.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    if ($result->getMatchedCount() === 0) {
+        $_SESSION['error'] = 'User not found.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    $_SESSION['user']['full_name'] = $fullName;
+    $_SESSION['success'] = 'Profile updated successfully.';
+
+    header('Location: ../pages/profile.php');
     exit;
 }

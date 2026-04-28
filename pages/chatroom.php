@@ -8,11 +8,13 @@ if (!isset($_SESSION['user'])) {
 
 $current_page = 'chat';
 $user = $_SESSION['user'];
+$groupName = clean_text($_GET['group'] ?? 'General');
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?php echo esc(csrf_token()); ?>">
     <title>LearnLoop | Study Room</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/dashboard.css">
@@ -30,21 +32,25 @@ $user = $_SESSION['user'];
         <main class="main-content">
             <div class="study-room-header">
                 <button class="back-button-figma" onclick="window.history.back()">← Back</button>
-                <h1 class="study-title-figma">Study Room</h1>
+                <h1 class="study-title-figma"><?php echo esc($groupName); ?> Study Room</h1>
             </div>
 
             <div class="study-layout-flex">
-                <div class="chat-box-figma">
+                <div
+                    class="chat-box-figma"
+                    id="chatBox"
+                    data-group="<?php echo esc($groupName); ?>"
+                    data-user-id="<?php echo esc($user['user_id'] ?? ''); ?>"
+                    data-user-name="<?php echo esc($user['full_name'] ?? 'Student'); ?>"
+                >
                     <div class="messages-container" id="chatMessages">
-                        <div class="message-row"><span class="avatar">A</span><p class="bubble">Hey everyone! Ready to Study?</p></div>
-                        <div class="message-row"><span class="avatar">B</span><p class="bubble">Hello! Yes, I'm very excited, Let's get Started!</p></div>
-                        <div class="message-row"><span class="avatar">C</span><p class="bubble">Me too!</p></div>
-                        <div class="message-row sent"><p class="bubble">Yes! Let's start with lecture notes.</p><span class="avatar">D</span></div>
+                        <div class="chat-empty">No messages yet.</div>
                     </div>
                     <div class="input-wrapper-figma">
-                        <button class="icon-btn"><i class="fas fa-link"></i></button>
+                        <button class="icon-btn" id="attachBtn" type="button"><i class="fas fa-link"></i></button>
+                        <input id="fileInput" type="file" hidden>
                         <input type="text" placeholder="Type something..." id="msgInput">
-                        <button class="icon-btn"><i class="fas fa-paper-plane"></i></button>
+                        <button class="icon-btn" id="sendBtn" type="button"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
 
@@ -52,7 +58,7 @@ $user = $_SESSION['user'];
                     <div class="members-header-inline">
                         <div>
                             <h3>Members</h3>
-                            <small>4 members</small>
+                            <small>1 member</small>
                         </div>
                         <button id="addMemberBtn" class="add-mini-btn">+ Add</button>
                     </div>
@@ -66,10 +72,7 @@ $user = $_SESSION['user'];
                     </div>
 
                     <div class="member-list-figma">
-                        <div class="member-item"><span class="user-icon"></span> <div><strong>Alice Zhang</strong><p>Admin</p></div></div>
                         <div class="member-item"><span class="user-icon"></span> <div><strong>You</strong><p>Member</p></div></div>
-                        <div class="member-item"><span class="user-icon"></span> <div><strong>Bob Lee</strong><p>Member</p></div></div>
-                        <div class="member-item"><span class="user-icon"></span> <div><strong>David Smith</strong><p>Member</p></div></div>
                     </div>
                     
                     <div class="toast-sent" id="inviteToast">Invite has been sent!</div>

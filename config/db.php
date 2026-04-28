@@ -4,12 +4,7 @@ session_start();
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-function db_name()
-{
-	return 'learnloop';
-}
-
-function db_client()
+function db()
 {
 	static $client = null;
 
@@ -17,13 +12,7 @@ function db_client()
 		$client = new MongoDB\Client();
 	}
 
-	return $client;
-}
-
-function db()
-{
-	// Using structured queries avoids SQL injection style string building.
-	return db_client()->selectDatabase(db_name());
+	return $client->selectDatabase('learnloop');
 }
 
 function csrf_token()
@@ -63,4 +52,35 @@ function esc($value)
 {
 	return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
 }
+
+function csrf_input()
+{
+	$token = esc(csrf_token());
+	return '<input type="hidden" name="_csrf_token" value="' . $token . '">';
+}
+
+function json_header(): void
+{
+	header('Content-Type: application/json; charset=UTF-8');
+}
+
+function safe_input($value, $max = 5000)
+{
+	if (is_array($value) || is_object($value)) {
+		return '';
+	}
+
+	$text = clean_text((string) $value);
+
+	if ($text !== '' && $text[0] === '$') {
+		$text = '';
+	}
+
+	if (strlen($text) > (int) $max) {
+		$text = substr($text, 0, (int) $max);
+	}
+
+	return $text;
+}
+
 ?>

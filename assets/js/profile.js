@@ -1,16 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const profileForm = document.getElementById('profileForm');
-    const passwordForm = document.getElementById('passwordForm');
-    const toast = document.getElementById('successToast');
+    const messages = document.querySelectorAll('.profile-message');
 
-    const showToast = (e) => {
-        e.preventDefault();
-        toast.style.display = 'block';
-        setTimeout(() => {
-            toast.style.display = 'none';
-        }, 3000);
-    };
+    if (messages.length === 0) {
+        return;
+    }
 
+    setTimeout(() => {
+        messages.forEach((message) => {
+            message.style.display = 'none';
+        });
+    }, 3000);
+});
     if (profileForm) profileForm.addEventListener('submit', showToast);
     if (passwordForm) passwordForm.addEventListener('submit', showToast);
 });``
+
