@@ -24,13 +24,11 @@ unset($_SESSION['error']);
 
         <?php if ($error !== ''): ?>
             <div style="background:#fee; color:#900; padding:10px; border-radius:6px; margin-bottom:10px;">
-                <?php echo esc($error); ?>
+                <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
             </div>
         <?php endif; ?>
 
         <form action="../api/auth.php?action=register" method="POST">
-            <input type="hidden" name="csrf_token" value="<?php echo esc(csrf_token()); ?>">
-
         <form action="../actions/register_process.php" method="POST">
 
             <div class="input-group">

@@ -8,7 +8,6 @@ if (!isset($_SESSION['user'])) {
 
 $current_page = 'notes';
 $user = $_SESSION['user'];
-$csrfToken = csrf_token();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -60,7 +59,6 @@ $csrfToken = csrf_token();
                 <button class="modal-close" id="closeUploadModal">&times;</button>
             </div>
             <form id="uploadForm" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="<?php echo esc($csrfToken); ?>">
                 <div class="form-group">
                     <label for="noteTitle">Title</label>
                     <input type="text" id="noteTitle" name="title" placeholder="e.g. Chapter 5 — Data Structures" required>
@@ -137,8 +135,7 @@ $csrfToken = csrf_token();
     </div>
 
 <script>
-const CSRF = '<?php echo esc($csrfToken); ?>';
-const CURRENT_USER = '<?php echo esc($user['user_id']); ?>';
+const CURRENT_USER = '<?php echo htmlspecialchars((string) ($user['user_id'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>';
 
 const notesGrid    = document.getElementById('notesGrid');
 const emptyState   = document.getElementById('emptyState');
@@ -184,10 +181,10 @@ function renderNotes(notes) {
         return '<div class="note-card" data-id="' + n.note_id + '">' +
             '<div class="note-icon"><i class="fa-solid ' + fileIcon(n.file_ext) + '"></i></div>' +
             '<div class="note-info">' +
-                '<h3 class="note-title">' + escHtml(n.title) + '</h3>' +
-                '<span class="note-subject">' + escHtml(n.subject) + '</span>' +
+                '<h3 class="note-title">' + n.title + '</h3>' +
+                '<span class="note-subject">' + n.subject + '</span>' +
                 '<div class="note-meta">' +
-                    '<span><i class="fa-solid fa-user"></i> ' + escHtml(n.uploader_name) + '</span>' +
+                    '<span><i class="fa-solid fa-user"></i> ' + n.uploader_name + '</span>' +
                     '<span><i class="fa-solid fa-hard-drive"></i> ' + fileSize(n.file_size) + '</span>' +
                 '</div>' +
             '</div>' +
@@ -197,12 +194,6 @@ function renderNotes(notes) {
             '</div>' +
         '</div>';
     }).join('');
-}
-
-function escHtml(str) {
-    var d = document.createElement('div');
-    d.textContent = str;
-    return d.innerHTML;
 }
 
 // ── Load notes ──
@@ -309,7 +300,6 @@ deleteModal.addEventListener('click', function(e) {
 document.getElementById('confirmDelete').addEventListener('click', function() {
     if (!deleteTargetId) return;
     var fd = new FormData();
-    fd.append('csrf_token', CSRF);
     fd.append('note_id', deleteTargetId);
 
     fetch('../api/notes.php?action=delete', { method: 'POST', body: fd })

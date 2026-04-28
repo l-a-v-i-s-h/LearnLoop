@@ -45,8 +45,8 @@ function create_note($notesCollection): void
 {
 	$body = get_request_body();
 
-	$title = clean_text($body['title'] ?? '');
-	$content = clean_text($body['content'] ?? '');
+	$title = trim((string) ($body['title'] ?? ''));
+	$content = trim((string) ($body['content'] ?? ''));
 
 	if ($title === '' || $content === '') {
 		http_response_code(422);
@@ -80,7 +80,7 @@ function create_note($notesCollection): void
 	$decodedContent = json_decode($content, true);
 	$groupId = '';
 	if (is_array($decodedContent) && !empty($decodedContent['group'])) {
-		$groupId = clean_text((string) $decodedContent['group']);
+		$groupId = trim((string) $decodedContent['group']);
 	}
 	if ($groupId === '') {
 		$groupId = 'general';
@@ -162,7 +162,7 @@ function get_notes($notesCollection): void
 function delete_note($notesCollection): void
 {
 	$body = get_request_body();
-	$noteId = clean_text($body['note_id'] ?? ($_GET['note_id'] ?? ''));
+	$noteId = trim((string) ($body['note_id'] ?? ($_GET['note_id'] ?? '')));
 
 	if ($noteId === '') {
 		http_response_code(422);
@@ -206,7 +206,7 @@ function delete_note($notesCollection): void
 
 function download_note($notesCollection): void
 {
-	$noteId = clean_text($_GET['note_id'] ?? '');
+	$noteId = trim((string) ($_GET['note_id'] ?? ''));
 
 	if ($noteId === '') {
 		http_response_code(422);

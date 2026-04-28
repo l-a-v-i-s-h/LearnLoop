@@ -8,14 +8,8 @@ function handle_login_process(): void
         exit;
     }
 
-    $token = clean_text($_POST['csrf_token'] ?? '');
-    if (!csrf_check($token)) {
-        $_SESSION['error'] = 'Invalid CSRF token.';
-        header('Location: ../pages/login.php');
-        exit;
-    }
-
-    $email = clean_email($_POST['email'] ?? '');
+    $emailRaw = trim((string) ($_POST['email'] ?? ''));
+    $email = filter_var($emailRaw, FILTER_VALIDATE_EMAIL) ? $emailRaw : '';
     $password = $_POST['password'] ?? '';
 
     if ($email === '' || $password === '') {
@@ -51,15 +45,9 @@ function handle_register_process(): void
         exit;
     }
 
-    $token = clean_text($_POST['csrf_token'] ?? '');
-    if (!csrf_check($token)) {
-        $_SESSION['error'] = 'Invalid CSRF token.';
-        header('Location: ../pages/register.php');
-        exit;
-    }
-
-    $fullname = clean_text($_POST['fullname'] ?? '');
-    $email = clean_email($_POST['email'] ?? '');
+    $fullname = trim((string) ($_POST['fullname'] ?? ''));
+    $emailRaw = trim((string) ($_POST['email'] ?? ''));
+    $email = filter_var($emailRaw, FILTER_VALIDATE_EMAIL) ? $emailRaw : '';
     $password = $_POST['password'] ?? '';
 
     if ($fullname === '' || $email === '' || $password === '') {
@@ -128,5 +116,60 @@ function handle_register_process(): void
 
     $_SESSION['success'] = 'Account created. Please sign in.';
     header('Location: ../pages/login.php');
+    exit;
+}
+
+function handle_profile_update_process(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    if (!isset($_SESSION['user']['user_id'])) {
+        header('Location: ../pages/login.php');
+        exit;
+    }
+
+    $userId = $_SESSION['user']['user_id'];
+    $currentEmail = (string) ($_SESSION['user']['email'] ?? '');
+    $fullName = trim((string) ($_POST['full_name'] ?? ''));
+    $email = trim((string) ($_POST['email'] ?? ''));
+
+    if ($fullName === '') {
+        $_SESSION['error'] = 'Please enter your full name.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    if ($email !== '' && $email !== $currentEmail) {
+        $_SESSION['error'] = 'Email cannot be changed.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    $users = db()->selectCollection('users');
+
+    try {
+        $result = $users->updateOne(
+            ['user_id' => $userId],
+            ['$set' => ['full_name' => $fullName]]
+        );
+    } catch (MongoDB\Driver\Exception\Exception $e) {
+        $_SESSION['error'] = 'Profile update failed.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    if ($result->getMatchedCount() === 0) {
+        $_SESSION['error'] = 'User not found.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    $_SESSION['user']['full_name'] = $fullName;
+    $_SESSION['success'] = 'Profile updated successfully.';
+
+    header('Location: ../pages/profile.php');
     exit;
 }

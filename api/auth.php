@@ -11,5 +11,9 @@ if ($action === 'login') {
 	handle_login_process();
 }
 
+if ($action === 'profile-update') {
+	handle_profile_update_process();
+}
+
 http_response_code(400);
 echo 'Invalid action.';

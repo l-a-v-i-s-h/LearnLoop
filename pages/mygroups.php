@@ -34,7 +34,10 @@ $user = $_SESSION['user'];
 
     <!-- Header -->
     <div class="groups-header">
-        <h1 class="page-title">My Study Groups</h1>
+        <div>
+            <h1 class="page-title">My Study Groups</h1>
+            <p class="page-subtitle">Connect and collaborate with your peers for better learning</p>
+        </div>
         <button class="create-btn" id="toggleFormBtn">
             + Create Group
         </button>
@@ -42,8 +45,8 @@ $user = $_SESSION['user'];
 
     <!-- FORM -->
     <div class="create-form" id="createForm">
-        <input type="text" id="groupName" placeholder="Group name...">
-        <input type="text" id="groupSubject" placeholder="Subject...">
+        <input type="text" id="groupName" placeholder="Group name..." required>
+        <input type="text" id="groupSubject" placeholder="Subject..." required>
 
         <button onclick="createGroup()">Create</button>
         <button onclick="toggleForm()">Cancel</button>
@@ -51,6 +54,30 @@ $user = $_SESSION['user'];
 
     <!-- GROUPS -->
     <div class="groups-grid" id="groupsGrid"></div>
+
+    <!-- Empty State -->
+    <div class="groups-empty" id="groupsEmpty" hidden>
+        <div class="groups-empty-icon">
+            <i class="fa-solid fa-user-group"></i>
+        </div>
+        <h2>No Groups Yet</h2>
+        <p>Create your first group to start learning with your study circle</p>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-card modal-delete">
+            <div class="delete-icon">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
+            <h2>Delete Group?</h2>
+            <p>This action cannot be undone. The group <strong id="deleteGroupName"></strong> will be removed.</p>
+            <div class="delete-actions">
+                <button class="cancel-btn" id="cancelDelete">Cancel</button>
+                <button class="confirm-delete-btn" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
 
 </main>
 </div>

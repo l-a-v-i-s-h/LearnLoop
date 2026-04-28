@@ -43,11 +43,6 @@ $current_page = 'notes';
                 <form id="uploadForm" class="upload-panel-row">
                     <select id="targetGroup" class="inline-field" required>
                         <option value="">Select group</option>
-                        <option value="Modern Web Arch">Modern Web Arch</option>
-                        <option value="Data Structures">Data Structures</option>
-                        <option value="Algorithms">Algorithms</option>
-                        <option value="Software Engineering">Software Engineering</option>
-                        <option value="Database Systems">Database Systems</option>
                     </select>
                     <button type="button" class="inline-field file-chooser" id="fileChooserBtn">
                         <span id="fileChooserLabel">Choose file ...</span>

@@ -1,7 +1,7 @@
 <header class="main-header">
-    <div class="logo-section">
+    <a href="dashboard.php" class="logo-section" style="text-decoration: none; color: inherit;">
         LearnL<span class="logo-icon"><i class="fa-solid fa-infinity"></i></span>p
-    </div>
+    </a>
     
     <div class="search-bar">
         <i class="fa-solid fa-magnifying-glass"></i>
