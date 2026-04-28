@@ -46,7 +46,7 @@ unset($_SESSION['error']);
                     <input type="checkbox" name="remember" id="remember">
                     <label for="remember">Remember me</label>
                 </div>
-                <a href="#" class="forgot-link">Forgot Password?</a>
+                <a href="forgot_password.php" class="forgot-link">Forgot Password?</a>
             </div>
 
             <button type="submit" class="auth-btn">Sign In</button>
