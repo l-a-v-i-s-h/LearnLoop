@@ -1,0 +1,145 @@
+* {
+    box-sizing: border-box;
+}
+
+body.verification-page {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #effdff;
+    color: #042130;
+    font-family: "Inter", Arial, sans-serif;
+}
+
+.verification-card {
+    width: 285px;
+    min-height: 343px;
+    padding: 22px 34px 24px;
+    border-radius: 8px;
+    background: #95c7ff;
+    text-align: center;
+}
+
+.verification-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 0 12px;
+    color: #042130;
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1;
+}
+
+.verification-logo .logo-icon {
+    color: #e4ff30;
+    font-size: 22px;
+    filter: drop-shadow(0 2px 2px rgba(4, 33, 48, 0.28));
+}
+
+.verification-lock {
+    width: 62px;
+    height: 62px;
+    margin: 0 auto 10px;
+    display: block;
+    object-fit: contain;
+}
+
+.verification-heading {
+    margin: 0;
+    color: #164870;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.05;
+}
+
+.verification-subtitle {
+    margin: 2px 0 13px;
+    color: #164870;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.verification-form {
+    margin: 0;
+}
+
+.verification-code {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    width: 217px;
+    margin: 0 auto 14px;
+}
+
+.verification-code input {
+    width: 31px;
+    height: 47px;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    background: #ffffff;
+    color: #164870;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 47px;
+    text-align: center;
+    outline: none;
+}
+
+.verification-code input:focus {
+    box-shadow: 0 0 0 2px #2e7dd6;
+}
+
+.verification-button {
+    display: block;
+    width: 130px;
+    height: 32px;
+    margin: 0 auto 14px;
+    border: 0;
+    border-radius: 6px;
+    background: #2e7dd6;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 32px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.verification-button:focus-visible {
+    outline: 2px solid #164870;
+    outline-offset: 2px;
+}
+
+.verification-resend,
+.verification-expiry {
+    margin: 0;
+    color: #164870;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.verification-resend {
+    margin-bottom: 2px;
+}
+
+.verification-resend a {
+    color: #164870;
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+@media (max-width: 420px) {
+    body.verification-page {
+        padding: 24px;
+    }
+
+    .verification-card {
+        width: min(285px, 100%);
+    }
+}
