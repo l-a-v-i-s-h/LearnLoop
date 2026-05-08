@@ -555,6 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadMessages();
+    setInterval(loadMessages, 1000);
 
     const addBtn = document.getElementById('addMemberBtn');
     const inviteCard = document.getElementById('inviteCard');

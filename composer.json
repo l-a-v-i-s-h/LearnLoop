@@ -1,6 +1,7 @@
 {
     "require": {
-        "mongodb/mongodb": "^2.2"
+        "mongodb/mongodb": "^2.2",
+        "pusher/pusher-php-server": "^7.2"
     },
     "require-dev": {
         "jetbrains/phpstorm-stubs": "^2025.3"

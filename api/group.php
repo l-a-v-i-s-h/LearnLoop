@@ -147,7 +147,7 @@ function read_body(): array
 	return is_array($data) ? $data : [];
 }
 
-function respond(int $code, bool $ok, string $message, $data = null): void
+function respond(int $code, bool $ok, string $message, mixed $data = null): void
 {
 	http_response_code($code);
 	$out = ['success' => $ok, 'message' => $message];

@@ -16,10 +16,11 @@ $groupName = clean_text($_GET['group'] ?? 'General');
     <meta charset="UTF-8">
     <meta name="csrf-token" content="<?php echo esc(csrf_token()); ?>">
     <title>LearnLoop | Study Room</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../assets/css/groups.css">
-    <link rel="stylesheet" href="../assets/css/chat.css">
+    <?php $v = time(); ?>
+    <link rel="stylesheet" href="../assets/css/style.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="../assets/css/dashboard.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="../assets/css/groups.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="../assets/css/chat.css?v=<?php echo $v; ?>">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
@@ -32,7 +33,7 @@ $groupName = clean_text($_GET['group'] ?? 'General');
         <main class="main-content">
             <div class="study-room-header">
                 <button class="back-button-figma" onclick="window.history.back()">← Back</button>
-                <h1 class="study-title-figma"><?php echo esc($groupName); ?> Study Room</h1>
+                <h1 class="study-title-figma"><?php echo esc($groupName); ?> Room</h1>
             </div>
 
             <div class="study-layout-flex">
@@ -81,6 +82,6 @@ $groupName = clean_text($_GET['group'] ?? 'General');
         </main>
     </div>
 
-    <script src="../assets/js/chat.js"></script>
+    <script src="../assets/js/chat.js?v=<?php echo $v; ?>"></script>
 </body>
 </html>
