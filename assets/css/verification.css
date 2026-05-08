@@ -14,9 +14,9 @@ body.verification-page {
 }
 
 .verification-card {
-    width: 285px;
-    min-height: 343px;
-    padding: 22px 34px 24px;
+    width: 380px;
+    min-height: 460px;
+    padding: 28px 36px 30px;
     border-radius: 8px;
     background: #95c7ff;
     text-align: center;
@@ -28,21 +28,21 @@ body.verification-page {
     justify-content: center;
     margin: 0 0 12px;
     color: #042130;
-    font-size: 22px;
-    font-weight: 400;
+    font-size: 26px;
+    font-weight: 700;
     line-height: 1;
 }
 
 .verification-logo .logo-icon {
     color: #e4ff30;
-    font-size: 22px;
+    font-size: 26px;
     filter: drop-shadow(0 2px 2px rgba(4, 33, 48, 0.28));
 }
 
 .verification-lock {
-    width: 62px;
-    height: 62px;
-    margin: 0 auto 10px;
+    width: 74px;
+    height: 74px;
+    margin: 0 auto 14px;
     display: block;
     object-fit: contain;
 }
@@ -50,17 +50,17 @@ body.verification-page {
 .verification-heading {
     margin: 0;
     color: #164870;
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 700;
-    line-height: 1.05;
+    line-height: 1.2;
 }
 
 .verification-subtitle {
-    margin: 2px 0 13px;
+    margin: 4px 0 18px;
     color: #164870;
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 600;
-    line-height: 1.1;
+    line-height: 1.35;
 }
 
 .verification-form {
@@ -70,22 +70,24 @@ body.verification-page {
 .verification-code {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 6px;
-    width: 217px;
-    margin: 0 auto 14px;
+    gap: 9px;
+    width: 310px;
+    margin: 20px auto 30px;
+    justify-items: center;
+    align-items: center;
 }
 
 .verification-code input {
-    width: 31px;
-    height: 47px;
+    width: 46px;
+    height: 64px;
     padding: 0;
     border: 0;
     border-radius: 5px;
     background: #ffffff;
     color: #164870;
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
-    line-height: 47px;
+    line-height: 64px;
     text-align: center;
     outline: none;
 }
@@ -96,16 +98,16 @@ body.verification-page {
 
 .verification-button {
     display: block;
-    width: 130px;
-    height: 32px;
-    margin: 0 auto 14px;
+    width: 180px;
+    height: 40px;
+    margin: 0 auto 18px;
     border: 0;
     border-radius: 6px;
     background: #2e7dd6;
     color: #ffffff;
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 32px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 40px;
     text-align: center;
     cursor: pointer;
 }
@@ -119,7 +121,7 @@ body.verification-page {
 .verification-expiry {
     margin: 0;
     color: #164870;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     line-height: 1.35;
 }
@@ -134,12 +136,22 @@ body.verification-page {
     text-decoration: underline;
 }
 
+.verification-resend button {
+    background: none;
+    border: none;
+    color: #164870;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+}
+
 @media (max-width: 420px) {
     body.verification-page {
         padding: 24px;
     }
 
     .verification-card {
-        width: min(285px, 100%);
+        width: min(380px, 100%);
     }
 }

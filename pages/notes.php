@@ -20,7 +20,7 @@ $current_page = 'notes';
     <link rel="stylesheet" href="../assets/css/notes.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
-<body class="dashboard-layout">
+<body class="dashboard-layout" data-user-id="<?php echo esc($_SESSION['user']['user_id'] ?? ''); ?>">
 
     <?php include '../includes/header.php'; ?>
 
@@ -96,6 +96,7 @@ $current_page = 'notes';
         </div>
     </div>
 
+    <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
     <script src="../assets/js/notes.js?v=<?php echo $v; ?>"></script>
 </body>
 </html>

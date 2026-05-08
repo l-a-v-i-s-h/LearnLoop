@@ -69,7 +69,7 @@ if ($requestMethod === 'DELETE') {
 respond_error(405);
 exit;
 
-function create_post($postsCollection): void
+function create_post(mixed $postsCollection): void
 {
 	$body = get_request_body();
 
@@ -126,7 +126,7 @@ function create_post($postsCollection): void
 	], 201);
 }
 
-function create_comment($postsCollection, $commentsCollection): void
+function create_comment(mixed $postsCollection, mixed $commentsCollection): void
 {
 	$body = get_request_body();
 
@@ -176,7 +176,7 @@ function create_comment($postsCollection, $commentsCollection): void
 	], 201);
 }
 
-function update_comment($commentsCollection): void
+function update_comment(mixed $commentsCollection): void
 {
 	$body = get_request_body();
 
@@ -218,7 +218,7 @@ function update_comment($commentsCollection): void
 	]);
 }
 
-function delete_comment($commentsCollection): void
+function delete_comment(mixed $commentsCollection): void
 {
 	$body = get_request_body();
 	$commentId = input_value($body, 'comment_id');
@@ -247,7 +247,7 @@ function delete_comment($commentsCollection): void
 	respond_success();
 }
 
-function get_posts($postsCollection, $commentsCollection): void
+function get_posts(mixed $postsCollection, mixed $commentsCollection): void
 {
 	$postId = trim((string) ($_GET['post_id'] ?? ''));
 
@@ -295,7 +295,7 @@ function get_posts($postsCollection, $commentsCollection): void
 	respond_success($posts);
 }
 
-function update_post($postsCollection): void
+function update_post(mixed $postsCollection): void
 {
 	$body = get_request_body();
 
@@ -368,7 +368,7 @@ function update_post($postsCollection): void
 	respond_success();
 }
 
-function delete_post($postsCollection, $commentsCollection): void
+function delete_post(mixed $postsCollection, mixed $commentsCollection): void
 {
 	$body = get_request_body();
 	$postId = input_value($body, 'post_id');
@@ -416,7 +416,7 @@ function delete_post($postsCollection, $commentsCollection): void
 	respond_success();
 }
 
-function map_post_document($doc, array $replies): array
+function map_post_document(mixed $doc, array $replies): array
 {
 	return [
 		'post_id' => $doc['post_id'] ?? '',
@@ -440,7 +440,7 @@ function respond_error(int $statusCode): void
 	]);
 }
 
-function respond_success($data = null, int $statusCode = 200): void
+function respond_success(mixed $data = null, int $statusCode = 200): void
 {
 	http_response_code($statusCode);
 	$response = [
@@ -454,7 +454,7 @@ function respond_success($data = null, int $statusCode = 200): void
 	echo json_encode($response);
 }
 
-function get_post_replies($commentsCollection, string $postId): array
+function get_post_replies(mixed $commentsCollection, string $postId): array
 {
 	if ($postId === '') {
 		return [];
@@ -504,7 +504,7 @@ function get_request_body(): array
 	return [];
 }
 
-function format_mongo_date($value): string
+function format_mongo_date(mixed $value): string
 {
 	if ($value instanceof MongoDB\BSON\UTCDateTime) {
 		$value = $value->toDateTime();

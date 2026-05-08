@@ -60,7 +60,7 @@ echo json_encode([
 ]);
 exit;
 
-function get_messages($chatCollection): void
+function get_messages(mixed $chatCollection): void
 {
 	$group = clean_text($_GET['group'] ?? 'General');
 
@@ -102,7 +102,7 @@ function get_messages($chatCollection): void
 	]);
 }
 
-function post_message($chatCollection): void
+function post_message(mixed $chatCollection): void
 {
 	$user = $_SESSION['user'];
 	$userId = $user['user_id'] ?? '';
@@ -243,7 +243,7 @@ function post_message($chatCollection): void
 	]);
 }
 
-function edit_message($chatCollection): void
+function edit_message(mixed $chatCollection): void
 {
 	$body = read_json_body();
 	$messageId = clean_text($body['message_id'] ?? '');
@@ -297,7 +297,7 @@ function edit_message($chatCollection): void
 	]);
 }
 
-function delete_message($chatCollection): void
+function delete_message(mixed $chatCollection): void
 {
 	$body = read_json_body();
 	$messageId = clean_text($body['message_id'] ?? '');
@@ -382,7 +382,7 @@ function read_json_body(): array
 	return is_array($decoded) ? $decoded : [];
 }
 
-function format_mongo_date($value): string
+function format_mongo_date(mixed $value): string
 {
 	if ($value instanceof MongoDB\BSON\UTCDateTime) {
 		return $value->toDateTime()->format('Y-m-d H:i:s');

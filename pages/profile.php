@@ -69,20 +69,21 @@ $current_page = 'profile';
 
                 <section class="settings-card">
                     <h2>Change Password</h2>
-                    <form id="passwordForm">
+                    <form id="passwordForm" action="../api/auth.php?action=change-pass" method="POST">
+                        <?php echo csrf_input(); ?>
                         <div class="form-group">
                             <label>Current password</label>
-                            <input type="password" required readonly>
+                            <input type="password" name="cur_pass" required placeholder="Current password">
                         </div>
                         <div class="form-group">
                             <label>New Password</label>
-                            <input type="password" required readonly> 
+                            <input type="password" name="new_pass" required placeholder="New password (min 6)"> 
                         </div>
                         <div class="form-group">
                             <label>Confirm New Password</label>
-                            <input type="password" required readonly>
+                            <input type="password" name="conf_pass" required placeholder="Confirm new password">
                         </div>
-                        <button type="button" class="btn-settings" disabled>Update Password</button>
+                        <button type="submit" class="btn-settings">Update Password</button>
                     </form>
                 </section>
             </div>

@@ -13,6 +13,7 @@ if (!isset($_SESSION['user'])) {
 }
 
 $notesCollection = db()->selectCollection('notes');
+$pusher = build_pusher();
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if (in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
@@ -59,7 +60,7 @@ echo json_encode([
 ]);
 exit;
 
-function create_note($notesCollection): void
+function create_note(mixed $notesCollection): void
 {
 	$body = get_request_body();
 
@@ -111,6 +112,14 @@ function create_note($notesCollection): void
 		return;
 	}
 
+	trigger_note_event('note-created', [
+		'user_id' => $userId,
+		'note_id' => $noteId,
+		'title' => $title,
+		'content' => $content,
+		'created_at' => format_mongo_date($now)
+	]);
+
 	http_response_code(201);
 	echo json_encode([
 		'success' => true,
@@ -123,7 +132,7 @@ function create_note($notesCollection): void
 	]);
 }
 
-function get_notes($notesCollection): void
+function get_notes(mixed $notesCollection): void
 {
 	$userId = $_SESSION['user']['user_id'];
 
@@ -159,7 +168,7 @@ function get_notes($notesCollection): void
 	]);
 }
 
-function delete_note($notesCollection): void
+function delete_note(mixed $notesCollection): void
 {
 	$body = get_request_body();
 	$noteId = safe_input($body['note_id'] ?? ($_GET['note_id'] ?? ''), 80);
@@ -202,9 +211,14 @@ function delete_note($notesCollection): void
 		'success' => true,
 		'message' => 'Note deleted successfully.'
 	]);
+
+	trigger_note_event('note-deleted', [
+		'user_id' => $userId,
+		'note_id' => $noteId
+	]);
 }
 
-function download_note($notesCollection): void
+function download_note(mixed $notesCollection): void
 {
 	$noteId = safe_input($_GET['note_id'] ?? '', 80);
 
@@ -293,7 +307,41 @@ function get_request_body(): array
 	return [];
 }
 
-function format_mongo_date($value): string
+function build_pusher(): ?Pusher\Pusher
+{
+	try {
+		$options = [
+			'cluster' => 'ap2',
+			'useTLS' => true
+		];
+
+		return new Pusher\Pusher(
+			'14db4509a104fa2c4d52',
+			'22eeaeff5739ab77e4cc',
+			'2150170',
+			$options
+		);
+	} catch (Exception $e) {
+		return null;
+	}
+}
+
+function trigger_note_event(string $eventName, array $payload): void
+{
+	global $pusher;
+
+	if (!$pusher) {
+		return;
+	}
+
+	try {
+		$pusher->trigger('notes-channel', $eventName, $payload);
+	} catch (Exception $e) {
+		// Ignore pusher failures so the API still works.
+	}
+}
+
+function format_mongo_date(mixed $value): string
 {
 	if ($value instanceof MongoDB\BSON\UTCDateTime) {
 		$value = $value->toDateTime();

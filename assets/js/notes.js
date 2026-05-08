@@ -3,6 +3,10 @@
 
   const API_URL = "../api/notes.php";
   const GROUP_API_URL = "../api/group.php";
+  const bodyEl = document.body;
+  const currentUserId = bodyEl ? String(bodyEl.getAttribute("data-user-id") || "") : "";
+  const PUSHER_KEY = "14db4509a104fa2c4d52";
+  const PUSHER_CLUSTER = "ap2";
   const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
   const csrfInput = document.querySelector('input[name="_csrf_token"]');
   const csrfToken = csrfTokenMeta
@@ -15,6 +19,7 @@
   let pendingFile = null;
   let pendingDeleteId = null;
   let groups = [];
+  let isRefreshing = false;
 
   // ===== DOM =====
   const tableWrapper = document.getElementById("notesTableWrapper");
@@ -144,6 +149,30 @@
       notes = [];
       render();
     }
+  }
+
+  function refreshNotesSilently() {
+    if (isRefreshing) return;
+    isRefreshing = true;
+
+    // Simple AJAX with XMLHttpRequest so beginners can follow.
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", API_URL, true);
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) return;
+      isRefreshing = false;
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const payload = JSON.parse(xhr.responseText || "{}");
+          notes = Array.isArray(payload.data) ? payload.data.map(mapApiNoteToRow) : [];
+          render();
+        } catch (err) {
+          // Ignore bad JSON.
+        }
+      }
+    };
+    xhr.send();
   }
 
   async function loadGroups() {
@@ -372,4 +401,46 @@
   // Init
   loadGroups();
   loadNotes();
+
+  // Simple fallback refresh to avoid manual reloads.
+  setInterval(refreshNotesSilently, 6000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      refreshNotesSilently();
+    }
+  });
+
+  // Real-time updates (beginner friendly)
+  if (window.Pusher && PUSHER_KEY) {
+    const pusher = new window.Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
+    const channel = pusher.subscribe("notes-channel");
+
+    channel.bind("note-created", (data) => {
+      if (!data || String(data.user_id || "") !== currentUserId) return;
+
+      const incomingId = String(data.note_id || "");
+      if (!incomingId) return;
+
+      const exists = notes.some(n => n.id === incomingId);
+      if (exists) return;
+
+      notes.unshift(mapApiNoteToRow({
+        note_id: data.note_id,
+        title: data.title,
+        content: data.content,
+        created_at: data.created_at
+      }));
+      render();
+    });
+
+    channel.bind("note-deleted", (data) => {
+      if (!data || String(data.user_id || "") !== currentUserId) return;
+
+      const deleteId = String(data.note_id || "");
+      if (!deleteId) return;
+
+      notes = notes.filter(n => n.id !== deleteId);
+      render();
+    });
+  }
 })();
