@@ -81,6 +81,9 @@ if ($method === 'POST') {
 if ($method === 'GET') {
 	$list = [];
 	try {
+		$groupMembers = db()->selectCollection('group_members');
+		
+		// Get groups owned by user
 		$cursor = $groups->find(['user_id' => $userId], ['sort' => ['created_at' => -1]]);
 		foreach ($cursor as $doc) {
 			$created = '';
@@ -93,8 +96,35 @@ if ($method === 'GET') {
 				'subject' => $doc['subject'] ?? '',
 				'description' => $doc['description'] ?? '',
 				'owner_name' => $doc['owner_name'] ?? '',
-				'created_at' => $created
+				'created_at' => $created,
+				'role' => 'owner'
 			];
+		}
+		
+		// Get groups where user is a member
+		$memberCursor = $groupMembers->find(['user_id' => $userId, 'role' => 'member']);
+		$memberGroupIds = [];
+		foreach ($memberCursor as $member) {
+			$memberGroupIds[] = $member['group_id'];
+		}
+		
+		if (!empty($memberGroupIds)) {
+			$memberGroupsCursor = $groups->find(['group_id' => ['$in' => $memberGroupIds]], ['sort' => ['created_at' => -1]]);
+			foreach ($memberGroupsCursor as $doc) {
+				$created = '';
+				if (isset($doc['created_at']) && $doc['created_at'] instanceof MongoDB\BSON\UTCDateTime) {
+					$created = $doc['created_at']->toDateTime()->format('Y-m-d H:i:s');
+				}
+				$list[] = [
+					'group_id' => $doc['group_id'] ?? '',
+					'group_name' => $doc['group_name'] ?? '',
+					'subject' => $doc['subject'] ?? '',
+					'description' => $doc['description'] ?? '',
+					'owner_name' => $doc['owner_name'] ?? '',
+					'created_at' => $created,
+					'role' => 'member'
+				];
+			}
 		}
 	} catch (Exception $e) {
 		respond(500, false, 'Failed to fetch groups.');

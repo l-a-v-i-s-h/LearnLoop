@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/upload.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 
@@ -87,6 +88,11 @@ function get_messages(mixed $chatCollection): void
 			'sender_name' => $doc['sender_name'] ?? '',
 			'type' => $doc['type'] ?? 'text',
 			'message' => $doc['message'] ?? '',
+			'note_id' => $doc['note_id'] ?? '',
+			'note_title' => $doc['note_title'] ?? '',
+			'note_group_id' => $doc['note_group_id'] ?? '',
+			'note_group_name' => $doc['note_group_name'] ?? '',
+			'note_visibility' => $doc['note_visibility'] ?? '',
 			'file_name' => $doc['file_name'] ?? '',
 			'file_path' => $doc['file_path'] ?? '',
 			'file_size' => (int) ($doc['file_size'] ?? 0),
@@ -130,37 +136,27 @@ function post_message(mixed $chatCollection): void
 	$filePath = '';
 	$fileSize = 0;
 
-	if (!empty($_FILES['file']) && is_uploaded_file($_FILES['file']['tmp_name'])) {
-		$upload = $_FILES['file'];
-		if (($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+	if (!empty($_FILES['file'])) {
+		$validation = validate_uploaded_files($_FILES['file']);
+		if (!empty($validation['errors'])) {
 			http_response_code(422);
 			echo json_encode([
 				'success' => false,
-				'message' => 'File upload failed.'
+				'message' => 'One or more files failed validation.',
+				'errors' => $validation['errors']
 			]);
 			return;
 		}
 
-		if (!is_allowed_chat_upload((string) ($upload['name'] ?? ''))) {
+		$validFiles = $validation['validFiles'];
+		if (count($validFiles) === 0) {
 			http_response_code(422);
 			echo json_encode([
 				'success' => false,
-				'message' => 'Unsupported file type.'
+				'message' => 'No valid files to upload.'
 			]);
 			return;
 		}
-
-		if ((int) ($upload['size'] ?? 0) <= 0 || (int) ($upload['size'] ?? 0) > 26214400) {
-			http_response_code(422);
-			echo json_encode([
-				'success' => false,
-				'message' => 'File size must be 25 MB or less.'
-			]);
-			return;
-		}
-
-		$safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($upload['name']));
-		$storedName = time() . '-' . bin2hex(random_bytes(4)) . '-' . $safeName;
 
 		$uploadDir = __DIR__ . '/../uploads/chat/' . $userId;
 		if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
@@ -172,21 +168,89 @@ function post_message(mixed $chatCollection): void
 			return;
 		}
 
-		$targetPath = $uploadDir . '/' . $storedName;
-		if (!move_uploaded_file($upload['tmp_name'], $targetPath)) {
+		$storedFiles = [];
+		foreach ($validFiles as $vf) {
+			$safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($vf['name']));
+			$storedName = time() . '-' . bin2hex(random_bytes(4)) . '-' . $safeName;
+			$targetPath = $uploadDir . '/' . $storedName;
+
+			if (!move_uploaded_file($vf['tmp_name'], $targetPath)) {
+				$storedFiles[] = ['file' => $vf['name'], 'status' => 'failed_move'];
+				continue;
+			}
+
+			$storedFiles[] = [
+				'file_name' => $vf['name'],
+				'file_path' => 'uploads/chat/' . $userId . '/' . $storedName,
+				'file_size' => (int) $vf['size']
+			];
+		}
+
+		if (count($storedFiles) === 0) {
 			http_response_code(500);
 			echo json_encode([
 				'success' => false,
-				'message' => 'Failed to upload file.'
+				'message' => 'Failed to save uploaded files.'
 			]);
 			return;
 		}
 
-		$type = 'file';
-		$fileName = $upload['name'];
-		$filePath = 'uploads/chat/' . $userId . '/' . $storedName;
-		$fileSize = (int) ($upload['size'] ?? 0);
-		$messageText = '';
+		// Insert a chat message for each stored file
+		$inserted = [];
+		foreach ($storedFiles as $sf) {
+			if (!is_array($sf) || empty($sf['file_path'])) {
+				continue;
+			}
+
+			$messageId = bin2hex(random_bytes(8));
+			$now = new MongoDB\BSON\UTCDateTime();
+
+			try {
+				$chatCollection->insertOne([
+					'message_id' => $messageId,
+					'group' => $group,
+					'user_id' => $userId,
+					'sender_name' => $senderName,
+					'type' => 'file',
+					'message' => '',
+					'file_name' => $sf['file_name'],
+					'file_path' => $sf['file_path'],
+					'file_size' => (int) ($sf['file_size'] ?? 0),
+					'edited' => false,
+					'created_at' => $now
+				]);
+
+				$inserted[] = [
+					'message_id' => $messageId,
+					'file_name' => $sf['file_name'],
+					'file_path' => $sf['file_path'],
+					'file_size' => (int) ($sf['file_size'] ?? 0),
+					'created_at' => format_mongo_date($now)
+				];
+			} catch (Exception $e) {
+				// if insert fails, try to unlink file to avoid orphaning
+				$path = __DIR__ . '/../' . ltrim($sf['file_path'], '/\\');
+				if (is_file($path)) {
+					@unlink($path);
+				}
+			}
+		}
+
+		if (count($inserted) > 0) {
+			echo json_encode([
+				'success' => true,
+				'message' => 'Files uploaded successfully.',
+				'data' => $inserted
+			]);
+			return;
+		}
+
+		http_response_code(500);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Failed to save uploaded files.'
+		]);
+		return;
 	}
 
 	if ($type === 'text' && $messageText === '') {
@@ -393,7 +457,7 @@ function format_mongo_date(mixed $value): string
 function is_allowed_chat_upload(string $fileName): bool
 {
 	$extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-	return in_array($extension, ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'png', 'jpg', 'jpeg'], true);
+	return in_array($extension, ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'png', 'jpg', 'jpeg', 'zip'], true);
 }
 
 

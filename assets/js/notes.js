@@ -16,7 +16,7 @@
   // Empty by default so empty state is shown first.
   let notes = [];
 
-  let pendingFile = null;
+  let pendingFiles = [];
   let pendingDeleteId = null;
   let groups = [];
   let isRefreshing = false;
@@ -110,32 +110,47 @@
 
   function parseNoteContent(rawContent) {
     if (!rawContent || typeof rawContent !== "string") {
-      return { group: "-", sizeBytes: 0 };
+      return { groupId: "public", groupName: "Public", visibility: "public", sizeBytes: 0, fileType: "txt" };
     }
 
     try {
       const obj = JSON.parse(rawContent);
       return {
-        group: obj.group ? String(obj.group) : "-",
-        sizeBytes: Number(obj.sizeBytes) || 0
+        groupId: obj.groupId ? String(obj.groupId) : (obj.group_id ? String(obj.group_id) : "public"),
+        groupName: obj.groupName ? String(obj.groupName) : (obj.group ? String(obj.group) : "Public"),
+        visibility: obj.visibility ? String(obj.visibility) : ((obj.groupId || obj.group_id) ? "private_group" : "public"),
+        sizeBytes: Number(obj.sizeBytes) || 0,
+        fileType: obj.fileType ? String(obj.fileType) : "txt"
       };
     } catch (err) {
       return {
-        group: rawContent,
-        sizeBytes: 0
+        groupId: "public",
+        groupName: String(rawContent || "Public"),
+        visibility: "public",
+        sizeBytes: 0,
+        fileType: "txt"
       };
     }
   }
 
   function mapApiNoteToRow(note) {
     const content = parseNoteContent(note.content || "");
+    const visibility = String(note.visibility || content.visibility || (String(note.group_id || "") === "public" ? "public" : "private_group"));
+    const groupName = String(note.group_name || content.groupName || (visibility === "public" ? "Public" : "Shared group"));
+    const ownerId = String(note.user_id || "");
+    const currentUserOwns = ownerId && ownerId === currentUserId;
 
     return {
       id: String(note.note_id || ""),
       name: note.title || "Untitled",
-      group: content.group,
+      group: groupName,
       sizeBytes: content.sizeBytes,
-      date: formatApiDate(note.created_at)
+      date: formatApiDate(note.created_at),
+      visibility,
+      ownerId,
+      ownerName: String(note.owner_name || note.user_name || note.user_full_name || note.owner || ""),
+      canDelete: currentUserOwns,
+      canDownload: visibility === "public" || currentUserOwns || visibility === "private_group"
     };
   }
 
@@ -145,7 +160,7 @@
       notes = Array.isArray(payload.data) ? payload.data.map(mapApiNoteToRow) : [];
       render();
     } catch (err) {
-      alert(err.message || "Could not load notes.");
+      notify('error', err.message || "Could not load notes.");
       notes = [];
       render();
     }
@@ -194,16 +209,17 @@
   function renderGroupOptions() {
     const currentValue = targetGroup.value;
 
-    const options = ['<option value="">Select group</option>'];
+    const options = ['<option value="">Share publicly</option>'];
     groups.forEach((g) => {
       const name = String(g.group_name || "").trim();
-      if (!name) return;
-      options.push('<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</option>');
+      const groupId = String(g.group_id || "").trim();
+      if (!name || !groupId) return;
+      options.push('<option value="' + escapeHtml(groupId) + '">' + escapeHtml(name) + '</option>');
     });
 
     targetGroup.innerHTML = options.join("");
 
-    if (currentValue && groups.some(g => String(g.group_name || "").trim() === currentValue)) {
+    if (currentValue && groups.some(g => String(g.group_id || "").trim() === currentValue)) {
       targetGroup.value = currentValue;
       targetGroup.classList.add("selected");
     } else {
@@ -211,13 +227,7 @@
       targetGroup.classList.remove("selected");
     }
 
-    if (groups.length === 0) {
-      targetGroup.disabled = true;
-      targetGroup.innerHTML = '<option value="">No groups available</option>';
-      targetGroup.classList.add("selected");
-    } else {
-      targetGroup.disabled = false;
-    }
+    targetGroup.disabled = false;
   }
 
   // ===== Render =====
@@ -242,9 +252,11 @@
           <button class="row-download" data-action="download" data-id="${n.id}" aria-label="Download">
             <i class="fa-solid fa-download"></i>
           </button>
+          ${n.canDelete ? `
           <button class="row-delete" data-action="delete" data-id="${n.id}" aria-label="Delete">
             <i class="fa-solid fa-trash"></i>
           </button>
+          ` : ''}
         </div>
       </div>
     `).join("");
@@ -252,7 +264,7 @@
 
   // Upload panel toggle //
   function resetUploadForm() {
-    pendingFile = null;
+    pendingFiles = [];
     fileInput.value = "";
     fileChooserLabel.textContent = "Choose file ...";
     fileChooserBtn.classList.remove("selected");
@@ -277,10 +289,20 @@
   fileChooserBtn.addEventListener("click", () => fileInput.click());
 
   fileInput.addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    pendingFile = file;
-    fileChooserLabel.textContent = file.name + " (" + formatSize(file.size) + ")";
+    const list = e.target.files ? Array.from(e.target.files) : [];
+    if (!list || list.length === 0) return;
+    if (list.length > 5) { notify('error','You can upload up to 5 files.'); fileInput.value = ''; return; }
+
+    // simple client-side checks
+    for (const f of list) {
+      if (f.size <= 0) { notify('error','One of the selected files is empty.'); fileInput.value = ''; return; }
+      if (f.size > 25 * 1024 * 1024) { notify('error','Each file must be 25 MB or less.'); fileInput.value = ''; return; }
+      const ext = getExt(f.name);
+      if (!['pdf','doc','docx','ppt','pptx','txt','png','jpg','jpeg','zip'].includes(ext)) { notify('error','Unsupported file type: .' + ext); fileInput.value = ''; return; }
+    }
+
+    pendingFiles = list;
+    fileChooserLabel.textContent = pendingFiles.map(f => f.name).join(', ');
     fileChooserBtn.classList.add("selected");
   });
 
@@ -291,38 +313,47 @@
 
   uploadForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (groups.length === 0) { alert("Please create a group first."); return; }
-    if (!targetGroup.value) { targetGroup.focus(); return; }
-    if (!pendingFile) { fileChooserBtn.focus(); return; }
-
-    const contentJson = JSON.stringify({
-      group: targetGroup.value,
-      sizeBytes: pendingFile.size,
-      fileType: getExt(pendingFile.name)
-    });
+    if (!pendingFiles || pendingFiles.length === 0) { fileChooserBtn.focus(); return; }
 
     try {
-      const payload = await apiRequest("POST", {
-        title: pendingFile.name,
-        content: contentJson
-      });
+      const selectedGroup = groups.find((g) => String(g.group_id || "") === String(targetGroup.value || ""));
+      const visibility = targetGroup.value ? "private_group" : "public";
+      const groupId = targetGroup.value ? String(targetGroup.value) : "public";
+      const groupName = targetGroup.value ? String(selectedGroup && selectedGroup.group_name ? selectedGroup.group_name : targetGroup.options[targetGroup.selectedIndex]?.text || "") : "Public";
 
-      const created = payload.data || null;
-      if (created && created.note_id) {
-        notes.unshift(mapApiNoteToRow({
-          note_id: created.note_id,
-          title: created.title,
-          content: created.content,
-          created_at: new Date().toISOString().slice(0, 19).replace("T", " ")
-        }));
-        render();
-      } else {
-        await loadNotes();
+      for (const f of pendingFiles) {
+        const contentJson = JSON.stringify({
+          groupId,
+          groupName,
+          visibility,
+          sizeBytes: f.size,
+          fileType: getExt(f.name)
+        });
+
+        const payload = await apiRequest("POST", {
+          title: f.name,
+          content: contentJson
+        });
+
+        const created = payload.data || null;
+        if (created && created.note_id) {
+          notes.unshift(mapApiNoteToRow({
+            note_id: created.note_id,
+            title: created.title,
+            content: created.content,
+            group_id: created.group_id,
+            group_name: created.group_name,
+            visibility: created.visibility,
+            user_id: created.user_id,
+            created_at: new Date().toISOString().slice(0, 19).replace("T", " ")
+          }));
+        }
       }
 
+      render();
       closeUploadPanel();
     } catch (err) {
-      alert(err.message || "Could not upload note.");
+      notify('error', err.message || "Could not upload note.");
     }
   });
 
@@ -354,7 +385,7 @@
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err.message || "Could not download file.");
+      notify('error', err.message || "Could not download file.");
     }
   });
 
@@ -386,7 +417,7 @@
       deleteModal.hidden = true;
       render();
     } catch (err) {
-      alert(err.message || "Could not delete note.");
+      notify('error', err.message || "Could not delete note.");
     }
   });
 
@@ -416,10 +447,14 @@
     const channel = pusher.subscribe("notes-channel");
 
     channel.bind("note-created", (data) => {
-      if (!data || String(data.user_id || "") !== currentUserId) return;
+      if (!data) return;
 
       const incomingId = String(data.note_id || "");
       if (!incomingId) return;
+
+      const visibility = String(data.visibility || "private_group");
+      const isOwn = String(data.user_id || "") === currentUserId;
+      if (visibility !== "public" && !isOwn) return;
 
       const exists = notes.some(n => n.id === incomingId);
       if (exists) return;
@@ -428,16 +463,24 @@
         note_id: data.note_id,
         title: data.title,
         content: data.content,
+        group_id: data.group_id,
+        group_name: data.group_name,
+        visibility: data.visibility,
+        user_id: data.user_id,
         created_at: data.created_at
       }));
       render();
     });
 
     channel.bind("note-deleted", (data) => {
-      if (!data || String(data.user_id || "") !== currentUserId) return;
+      if (!data) return;
 
       const deleteId = String(data.note_id || "");
       if (!deleteId) return;
+
+      const visibility = String(data.visibility || "private_group");
+      const isOwn = String(data.user_id || "") === currentUserId;
+      if (visibility !== "public" && !isOwn) return;
 
       notes = notes.filter(n => n.id !== deleteId);
       render();

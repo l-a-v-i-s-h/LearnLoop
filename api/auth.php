@@ -19,6 +19,22 @@ if ($action === 'verify-email') {
 	handle_verify_email_process();
 }
 
+if ($action === 'resend-code') {
+	handle_resend_verification_code_process();
+}
+
+if ($action === 'recover') {
+	handle_recover_password_process();
+}
+
+if ($action === 'resend-reset-code') {
+	handle_resend_reset_code_process();
+}
+
+if ($action === 'reset-password') {
+	handle_reset_password_process();
+}
+
 if ($action === 'change-pass') {
     handle_pass_change();
 }
