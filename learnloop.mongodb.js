@@ -113,6 +113,45 @@ db.createCollection("comments", {
 	}
 });
 
+db.createCollection("notifications", {
+	validator: {
+		$jsonSchema: {
+			bsonType: "object",
+			required: ["notification_id", "type", "sender_id", "recipient_id", "status", "created_at"],
+			properties: {
+				notification_id: { bsonType: "string" },
+				type: { bsonType: "string" },
+				sender_id: { bsonType: "string" },
+				sender_name: { bsonType: "string" },
+				sender_email: { bsonType: "string" },
+				recipient_id: { bsonType: "string" },
+				recipient_email: { bsonType: "string" },
+				group_id: { bsonType: "string" },
+				group_name: { bsonType: "string" },
+				message: { bsonType: "string" },
+				status: { bsonType: "string" },
+				created_at: { bsonType: "date" },
+				updated_at: { bsonType: "date" }
+			}
+		}
+	}
+});
+
+db.createCollection("group_members", {
+	validator: {
+		$jsonSchema: {
+			bsonType: "object",
+			required: ["member_id", "group_id", "user_id", "role", "joined_at"],
+			properties: {
+				member_id: { bsonType: "string" },
+				group_id: { bsonType: "string" },
+				user_id: { bsonType: "string" },
+				role: { bsonType: "string" },
+				joined_at: { bsonType: "date" }
+			}
+		}
+	}
+});
 
 db.users.createIndex({ user_id: 1 }, { unique: true });
 db.users.createIndex({ username: 1 }, { unique: true });
@@ -140,5 +179,15 @@ db.forum_posts.createIndex({ user_id: 1 });
 db.comments.createIndex({ comment_id: 1 }, { unique: true });
 db.comments.createIndex({ post_id: 1 });
 db.comments.createIndex({ user_id: 1 });
+
+db.notifications.createIndex({ notification_id: 1 }, { unique: true });
+db.notifications.createIndex({ recipient_id: 1 });
+db.notifications.createIndex({ sender_id: 1 });
+db.notifications.createIndex({ recipient_id: 1, status: 1 });
+
+db.group_members.createIndex({ member_id: 1 }, { unique: true });
+db.group_members.createIndex({ group_id: 1 });
+db.group_members.createIndex({ user_id: 1 });
+db.group_members.createIndex({ group_id: 1, user_id: 1 });
 
 print("learnloop database setup complete.");
