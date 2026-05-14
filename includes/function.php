@@ -39,20 +39,6 @@ function handle_login_process(): void
         exit;
     }
 
-    // Check if user's email is verified
-    if (!isset($user['is_verified']) || $user['is_verified'] !== true) {
-        // Store email temporarily for verification page
-        $_SESSION['temp_email'] = $email;
-        $_SESSION['user_id_pending'] = $user['user_id'];
-        
-        // Send verification email if not already sent
-        send_verification_email($email, $user['full_name']);
-        
-        $_SESSION['error'] = 'Please verify your email first. Check your inbox for the verification code.';
-        header('Location: ../pages/verification.php');
-        exit;
-    }
-
     $_SESSION['user'] = [
         'user_id' => $user['user_id'],
         'full_name' => $user['full_name'],
