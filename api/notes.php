@@ -45,6 +45,8 @@ if ($requestMethod === 'POST') {
 if ($requestMethod === 'GET') {
 	if (isset($_GET['action']) && $_GET['action'] === 'download') {
 		download_note($notesCollection);
+	} elseif (isset($_GET['action']) && $_GET['action'] === 'count') {
+		get_notes_count($notesCollection);
 	} else {
 		get_notes($notesCollection);
 	}
@@ -481,5 +483,29 @@ function format_mongo_date(mixed $value): string
 	}
 
 	return '';
+
+function get_notes_count(mixed $notesCollection): void
+{
+	$userId = $_SESSION['user']['user_id'];
+
+	try {
+		$userNotesCount = $notesCollection->countDocuments(['user_id' => $userId]);
+		
+		http_response_code(200);
+		echo json_encode([
+			'success' => true,
+			'message' => 'Notes count fetched successfully.',
+			'data' => [
+				'count' => $userNotesCount
+			]
+		]);
+	} catch (Exception $e) {
+		http_response_code(500);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Failed to fetch notes count.'
+		]);
+	}
+}
 }
 

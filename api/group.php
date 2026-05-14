@@ -79,6 +79,32 @@ if ($method === 'POST') {
 }
 
 if ($method === 'GET') {
+	// Handle count action
+	if (isset($_GET['action']) && $_GET['action'] === 'count') {
+		try {
+			$groupMembers = db()->selectCollection('group_members');
+			
+			// Count groups owned by user
+			$ownedCount = $groups->countDocuments(['user_id' => $userId]);
+			
+			// Count groups where user is a member
+			$membershipRecords = $groupMembers->find(['user_id' => $userId, 'role' => 'member']);
+			$memberCount = iterator_count($membershipRecords);
+			
+			$totalCount = $ownedCount + $memberCount;
+			
+			respond(200, true, 'Group count fetched successfully.', [
+				'owned' => $ownedCount,
+				'member' => $memberCount,
+				'total' => $totalCount
+			]);
+			exit;
+		} catch (Exception $e) {
+			respond(500, false, 'Failed to fetch group count.');
+			exit;
+		}
+	}
+	
 	$list = [];
 	try {
 		$groupMembers = db()->selectCollection('group_members');
