@@ -19,7 +19,7 @@ $current_page = 'dashboard';
     <link rel="stylesheet" href="../assets/css/notifications.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
-<body class="dashboard-layout">
+<body class="dashboard-layout" data-user-id="<?php echo esc($_SESSION['user']['user_id'] ?? ''); ?>">
 
     <?php include '../includes/header.php'; ?>
 
@@ -72,11 +72,17 @@ $current_page = 'dashboard';
             </div>
         </main>
 
+        <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
         <script>
+            const PUSHER_KEY = '14db4509a104fa2c4d52';
+            const PUSHER_CLUSTER = 'ap2';
+            const currentUserId = String(document.body?.getAttribute('data-user-id') || '');
+
             document.addEventListener('DOMContentLoaded', function() {
                 fetchGroupCount();
                 fetchNotesCount();
                 fetchRecentForums();
+                initNotesUpdates();
             });
 
             function fetchGroupCount() {
@@ -106,6 +112,36 @@ $current_page = 'dashboard';
                         document.getElementById('notes-count').textContent = '0';
                     });
             }
+
+            function initNotesUpdates() {
+                if (!window.Pusher || !PUSHER_KEY) {
+                    return;
+                }
+
+                const pusher = new window.Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
+                const channel = pusher.subscribe('notes-channel');
+
+                const refreshIfOwnNote = (data) => {
+                    if (!data) return;
+
+                    if (String(data.user_id || '') !== currentUserId) {
+                        return;
+                    }
+
+                    fetchNotesCount();
+                };
+
+                channel.bind('note-created', refreshIfOwnNote);
+                channel.bind('note-deleted', refreshIfOwnNote);
+            }
+
+            setInterval(fetchNotesCount, 6000);
+
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    fetchNotesCount();
+                }
+            });
 
             function fetchRecentForums() {
                 fetch('../api/post.php?action=recent&limit=2')

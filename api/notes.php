@@ -483,13 +483,33 @@ function format_mongo_date(mixed $value): string
 	}
 
 	return '';
+}
 
 function get_notes_count(mixed $notesCollection): void
 {
 	$userId = $_SESSION['user']['user_id'];
 
 	try {
-		$userNotesCount = $notesCollection->countDocuments(['user_id' => $userId]);
+		$cursor = $notesCollection->find(
+			[
+				'$or' => [
+					['visibility' => 'public'],
+					['user_id' => $userId]
+				]
+			],
+			['sort' => ['uploaded_at' => -1, 'created_at' => -1]]
+		);
+
+		$userNotesCount = 0;
+		foreach ($cursor as $doc) {
+			$visibility = $doc['visibility'] ?? (($doc['group_id'] ?? 'public') === 'public' ? 'public' : 'private_group');
+			$isOwn = (($doc['user_id'] ?? '') === $userId);
+			if ($visibility !== 'public' && !$isOwn) {
+				continue;
+			}
+
+			$userNotesCount++;
+		}
 		
 		http_response_code(200);
 		echo json_encode([
@@ -506,6 +526,5 @@ function get_notes_count(mixed $notesCollection): void
 			'message' => 'Failed to fetch notes count.'
 		]);
 	}
-}
 }
 

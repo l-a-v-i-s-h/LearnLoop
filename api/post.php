@@ -489,6 +489,36 @@ function get_post_replies(mixed $commentsCollection, string $postId): array
 	return $replies;
 }
 
+function get_recent_posts(mixed $postsCollection, mixed $commentsCollection, int $limit = 3): void
+{
+	$requestedLimit = (int) ($_GET['limit'] ?? $limit);
+	if ($requestedLimit < 1) {
+		$requestedLimit = $limit;
+	}
+	if ($requestedLimit > 100) {
+		$requestedLimit = 100;
+	}
+
+	try {
+		$cursor = $postsCollection->find([], [
+			'sort' => ['created_at' => -1],
+			'limit' => $requestedLimit
+		]);
+	} catch (Exception $e) {
+		respond_error(500);
+		return;
+	}
+
+	$posts = [];
+	foreach ($cursor as $doc) {
+		$currentPostId = $doc['post_id'] ?? '';
+		$replies = get_post_replies($commentsCollection, $currentPostId);
+		$posts[] = map_post_document($doc, $replies);
+	}
+
+	respond_success($posts);
+}
+
 function get_request_body(): array
 {
 	if (!empty($_POST)) {
@@ -572,36 +602,6 @@ function require_value(string $value): bool
 function require_max_len(string $value, int $max): bool
 {
 	if (strlen($value) <= $max) {
-
-		function get_recent_posts(mixed $postsCollection, mixed $commentsCollection, int $limit = 3): void
-		{
-			$requestedLimit = (int) ($_GET['limit'] ?? $limit);
-			if ($requestedLimit < 1) {
-				$requestedLimit = $limit;
-			}
-			if ($requestedLimit > 100) {
-				$requestedLimit = 100;
-			}
-
-			try {
-				$cursor = $postsCollection->find([], [
-					'sort' => ['created_at' => -1],
-					'limit' => $requestedLimit
-				]);
-			} catch (Exception $e) {
-				respond_error(500);
-				return;
-			}
-
-			$posts = [];
-			foreach ($cursor as $doc) {
-				$currentPostId = $doc['post_id'] ?? '';
-				$replies = get_post_replies($commentsCollection, $currentPostId);
-				$posts[] = map_post_document($doc, $replies);
-			}
-
-			respond_success($posts);
-		}
 		return true;
 	}
 
