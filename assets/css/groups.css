@@ -126,12 +126,9 @@
 .group-card {
   height: 200px;
   background: #c7ddea;
-<<<<<<< HEAD
   padding: 20px;
-=======
   padding: 24px;
   padding: 28px;
->>>>>>> 2082ef430bfa75b9fdea186a704dfe05f7e8af5b
   border-radius: 12px;
   cursor: pointer;
   transition: transform 0.2s ease;
@@ -139,12 +136,10 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-<<<<<<< HEAD
 }
 
 .group-card:hover {
   transform: scale(1.02);
-=======
   min-height: 180px;
 }
 
@@ -157,7 +152,6 @@
 .group-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(22, 72, 112, 0.16);
->>>>>>> 2082ef430bfa75b9fdea186a704dfe05f7e8af5b
 }
 
 .group-card h3 {
@@ -177,12 +171,9 @@
 
 .group-card p {
   font-size: 14px;
-<<<<<<< HEAD
-=======
   color: #3a76a7;
   margin-top: 8px;
   flex-grow: 1;
->>>>>>> 2082ef430bfa75b9fdea186a704dfe05f7e8af5b
   color: #164870;
 }
 
@@ -202,8 +193,6 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-<<<<<<< HEAD
-=======
   color: #3a76a7;
   font-size: 18px;
   font-family: inherit;
@@ -303,7 +292,6 @@
 
 .cancel-btn {
   background: #e7f5fe;
->>>>>>> 2082ef430bfa75b9fdea186a704dfe05f7e8af5b
   color: #164870;
 }
 
