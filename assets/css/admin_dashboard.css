@@ -1,0 +1,481 @@
+:root {
+    --admin-navy: #164870;
+    --admin-text: #042130;
+    --admin-header: #95c7ff;
+    --admin-shell: #fffdfd;
+    --admin-surface: #c8efff;
+    --admin-sidebar: #2f6eb9;
+    --admin-sidebar-active: #d4e2f2;
+    --admin-white: #ffffff;
+    --admin-yellow: #e4ff30;
+    --admin-peach: #fec1a6;
+    --admin-pink: #ffd2e3;
+    --admin-danger: #e55e57;
+    --admin-medium: #ffbd67;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body.admin-dashboard-page {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--admin-shell);
+    color: var(--admin-text);
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+.admin-shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--admin-shell);
+}
+
+.admin-header {
+    min-height: 92px;
+    display: grid;
+    grid-template-columns: 252px minmax(260px, 485px) 1fr;
+    align-items: center;
+    gap: 34px;
+    padding: 0 42px;
+    background: var(--admin-header);
+}
+
+.admin-logo {
+    color: var(--admin-navy);
+    font-size: 36px;
+    line-height: 1;
+    text-decoration: none;
+    letter-spacing: -1.6px;
+}
+
+.admin-logo span {
+    color: var(--admin-yellow);
+    display: inline-block;
+    margin: 0 2px;
+    font-size: 29px;
+    transform: translateY(-1px);
+}
+
+.admin-search {
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    border-radius: 8px;
+    background: var(--admin-white);
+    color: var(--admin-navy);
+}
+
+.admin-search i {
+    font-size: 18px;
+}
+
+.admin-search input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    color: var(--admin-navy);
+    background: transparent;
+    font-size: 16px;
+}
+
+.admin-profile {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 40px;
+    color: var(--admin-white);
+}
+
+.admin-profile-copy {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 20px;
+}
+
+.admin-avatar {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--admin-white);
+    color: var(--admin-navy);
+    font-size: 21px;
+}
+
+.logout-button {
+    width: 42px;
+    height: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--admin-white);
+    cursor: pointer;
+    font-size: 22px;
+}
+
+.admin-layout {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 363px 1fr;
+}
+
+.admin-sidebar {
+    min-height: calc(100vh - 92px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 28px 24px 24px 27px;
+    background: var(--admin-sidebar);
+}
+
+.admin-nav {
+    display: grid;
+    gap: 6px;
+}
+
+.admin-nav-secondary {
+    margin-top: 36px;
+}
+
+.admin-nav-item {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 18px;
+    border-radius: 10px;
+    color: var(--admin-white);
+    text-decoration: none;
+    font-size: 17px;
+    transition: background 160ms ease, color 160ms ease;
+}
+
+.admin-nav-item i {
+    width: 22px;
+    text-align: center;
+    font-size: 19px;
+}
+
+.admin-nav-item:hover,
+.admin-nav-item.is-active {
+    background: var(--admin-sidebar-active);
+    color: var(--admin-navy);
+}
+
+.admin-main {
+    padding: 28px 46px 28px;
+    min-width: 0;
+}
+
+.admin-main h1 {
+    margin: 0 0 22px;
+    color: var(--admin-navy);
+    font-size: 30px;
+    font-weight: 500;
+}
+
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 32px;
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.admin-stat-card {
+    min-height: 108px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 16px 22px;
+    border-radius: 8px;
+}
+
+.stat-students {
+    background: var(--admin-header);
+}
+
+.stat-reports {
+    background: var(--admin-peach);
+}
+
+.stat-banned {
+    background: var(--admin-pink);
+}
+
+.admin-stat-icon {
+    width: 46px;
+    height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 8px;
+    background: var(--admin-white);
+    color: var(--admin-navy);
+    font-size: 21px;
+}
+
+.admin-stat-card p,
+.admin-stat-card strong {
+    margin: 0;
+}
+
+.admin-stat-card p {
+    margin-bottom: 5px;
+    font-size: 13px;
+}
+
+.admin-stat-card strong {
+    display: block;
+    color: var(--admin-navy);
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.admin-panels {
+    display: grid;
+    grid-template-columns: minmax(520px, 1.45fr) minmax(360px, 1fr);
+    gap: 26px;
+    align-items: start;
+    width: 100%;
+}
+
+.admin-panel {
+    padding: 12px 16px 14px;
+    border-radius: 12px;
+    background: var(--admin-surface);
+}
+
+.panel-heading {
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 9px;
+}
+
+.panel-heading h2 {
+    margin: 0;
+    color: var(--admin-navy);
+    font-size: 20px;
+    font-weight: 500;
+}
+
+.panel-heading a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--admin-navy);
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.queue-list,
+.banned-list {
+    display: grid;
+    gap: 8px;
+}
+
+.queue-item {
+    min-height: 48px;
+    display: grid;
+    grid-template-columns: 38px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 10px;
+    border-radius: 11px;
+    background: var(--admin-white);
+}
+
+.mini-avatar {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--admin-surface);
+    color: var(--admin-navy);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.queue-copy strong,
+.queue-copy span {
+    display: block;
+}
+
+.queue-copy strong {
+    margin-bottom: 2px;
+    color: var(--admin-navy);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.queue-copy span {
+    font-size: 10px;
+}
+
+.pill {
+    min-width: 44px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    color: var(--admin-white);
+    font-size: 9px;
+    font-style: normal;
+    text-align: center;
+}
+
+.pill-high {
+    background: var(--admin-danger);
+}
+
+.pill-medium {
+    background: var(--admin-medium);
+}
+
+.banned-item {
+    min-height: 48px;
+    display: grid;
+    grid-template-columns: 34px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 10px;
+    border-radius: 10px;
+    background: var(--admin-white);
+}
+
+.banned-item strong {
+    color: var(--admin-navy);
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.1;
+}
+
+.banned-meta {
+    display: grid;
+    justify-items: end;
+    gap: 3px;
+}
+
+.banned-meta em {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--admin-danger);
+    color: var(--admin-white);
+    font-size: 8px;
+    font-style: normal;
+}
+
+.banned-meta span {
+    font-size: 9px;
+}
+
+@media (max-width: 1180px) {
+    .admin-header {
+        grid-template-columns: 220px minmax(220px, 1fr);
+    }
+
+    .admin-profile {
+        grid-column: 1 / -1;
+        justify-content: space-between;
+        padding-bottom: 20px;
+    }
+
+    .admin-layout {
+        grid-template-columns: 280px 1fr;
+    }
+
+    .admin-stats,
+    .admin-panels {
+        grid-template-columns: 1fr;
+        max-width: none;
+    }
+}
+
+@media (max-width: 820px) {
+    .admin-header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        padding: 22px;
+    }
+
+    .admin-search,
+    .admin-profile {
+        width: 100%;
+    }
+
+    .admin-layout {
+        display: block;
+    }
+
+    .admin-sidebar {
+        min-height: auto;
+        gap: 26px;
+    }
+
+    .admin-main {
+        padding: 28px 20px 36px;
+    }
+
+    .admin-stats {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+}
+
+@media (max-height: 820px) and (min-width: 821px) {
+    .admin-header {
+        min-height: 82px;
+    }
+
+    .admin-sidebar {
+        min-height: calc(100vh - 82px);
+        padding-top: 22px;
+        padding-bottom: 18px;
+    }
+
+    .admin-main {
+        padding-top: 22px;
+        padding-bottom: 20px;
+    }
+
+    .admin-main h1 {
+        margin-bottom: 18px;
+        font-size: 28px;
+    }
+
+    .admin-stats {
+        margin-bottom: 20px;
+    }
+
+    .admin-stat-card {
+        min-height: 96px;
+    }
+
+    .admin-panel {
+        padding-top: 10px;
+        padding-bottom: 12px;
+    }
+
+    .queue-list,
+    .banned-list {
+        gap: 7px;
+    }
+
+    .queue-item,
+    .banned-item {
+        min-height: 44px;
+    }
+}
