@@ -1,3 +1,13 @@
+<?php
+require_once __DIR__ . '/../config/db.php';
+
+if (!isset($_SESSION['admin']['admin_id'])) {
+    header('Location: admin_login.php');
+    exit;
+}
+
+$adminName = (string) ($_SESSION['admin']['full_name'] ?? 'Admin');
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,12 +32,15 @@
             <div class="admin-profile">
                 <div class="admin-profile-copy">
                     <span class="admin-avatar"><i class="fa-regular fa-user"></i></span>
-                    <span>Admin</span>
+                    <span><?php echo esc($adminName); ?></span>
                 </div>
 
-                <button class="logout-button" type="button" aria-label="Log out">
-                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                </button>
+                <form action="../api/auth.php?action=admin-logout" method="POST" style="margin: 0;">
+                    <?php echo csrf_input(); ?>
+                    <button class="logout-button" type="submit" aria-label="Log out">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </form>
             </div>
         </header>
 
@@ -38,46 +51,34 @@
                         <i class="fa-solid fa-house"></i>
                         <span>Dashboard</span>
                     </a>
+
                     <a class="admin-nav-item" href="#">
                         <i class="fa-solid fa-users"></i>
                         <span>All Students</span>
                     </a>
-                    <a class="admin-nav-item" href="#">
-                        <i class="fa-regular fa-note-sticky"></i>
-                        <span>Shared Notes</span>
-                    </a>
-                    <a class="admin-nav-item" href="#">
+
+                    <a class="admin-nav-item" href="forums.php">
                         <i class="fa-regular fa-comments"></i>
                         <span>Academic Forums</span>
                     </a>
-                    <a class="admin-nav-item" href="#">
-                        <i class="fa-regular fa-flag"></i>
-                        <span>Reports Quests</span>
-                    </a>
+
                     <a class="admin-nav-item" href="#">
                         <i class="fa-solid fa-headset"></i>
                         <span>Chat Monitor</span>
                     </a>
+
                     <a class="admin-nav-item" href="#">
                         <i class="fa-solid fa-ban"></i>
                         <span>Banned Users</span>
                     </a>
+                    
                     <a class="admin-nav-item" href="#">
                         <i class="fa-regular fa-user"></i>
                         <span>Account</span>
                     </a>
                 </nav>
 
-                <nav class="admin-nav admin-nav-secondary" aria-label="Admin utilities">
-                    <a class="admin-nav-item" href="#">
-                        <i class="fa-solid fa-gear"></i>
-                        <span>Settings</span>
-                    </a>
-                    <a class="admin-nav-item" href="#">
-                        <i class="fa-regular fa-clipboard"></i>
-                        <span>Audit Logs</span>
-                    </a>
-                </nav>
+
             </aside>
 
             <main class="admin-main">
