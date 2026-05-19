@@ -12,6 +12,10 @@
     --admin-pink: #ffd2e3;
     --admin-danger: #e55e57;
     --admin-medium: #ffbd67;
+    --admin-green: #bfffac;
+    --admin-soft-blue: #c1deff;
+    --admin-soft-panel: #8fc9ff;
+    --admin-avatar-blue: #c0eeff;
 }
 
 * {
@@ -124,6 +128,7 @@ body.admin-dashboard-page {
     flex: 1;
     display: grid;
     grid-template-columns: 363px 1fr;
+    min-height: 0;
 }
 
 .admin-sidebar {
@@ -158,9 +163,18 @@ body.admin-dashboard-page {
 }
 
 .admin-nav-item i {
-    width: 22px;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 7px;
+    background: var(--admin-white);
+    color: var(--admin-navy);
     text-align: center;
-    font-size: 19px;
+    font-size: 18px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
 .admin-nav-item:hover,
@@ -172,6 +186,7 @@ body.admin-dashboard-page {
 .admin-main {
     padding: 28px 46px 28px;
     min-width: 0;
+    background: #f1ffff;
 }
 
 .admin-main h1 {
@@ -381,6 +396,243 @@ body.admin-dashboard-page {
     font-size: 9px;
 }
 
+.banned-main {
+    min-height: calc(100vh - 92px);
+    padding: 34px clamp(28px, 4vw, 64px);
+}
+
+.banned-main h1 {
+    margin-bottom: 18px;
+}
+
+.banned-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(170px, 1fr));
+    gap: 26px;
+    margin-bottom: 26px;
+}
+
+.banned-summary-card {
+    min-height: 107px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 19px 22px;
+    border-radius: 8px;
+    border: 1px solid rgba(22, 72, 112, 0.12);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.banned-summary-card p,
+.banned-summary-card strong {
+    margin: 0;
+    color: var(--admin-navy);
+}
+
+.banned-summary-card p {
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.banned-summary-card strong {
+    display: block;
+    font-size: 34px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.banned-summary-icon {
+    width: 52px;
+    height: 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 10px;
+    background: var(--admin-white);
+    color: var(--admin-navy);
+    font-size: 24px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.16);
+}
+
+.banned-total {
+    background: var(--admin-soft-blue);
+}
+
+.banned-active {
+    background: var(--admin-green);
+}
+
+.banned-warned {
+    background: var(--admin-peach);
+}
+
+.banned-blocked {
+    background: var(--admin-pink);
+}
+
+.banned-table-panel {
+    width: 100%;
+    min-height: 424px;
+    padding: 17px 21px 21px;
+    border-radius: 12px;
+    background: var(--admin-soft-panel);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.banned-toolbar {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) auto;
+    gap: 9px;
+    margin-bottom: 18px;
+}
+
+.banned-list-search {
+    min-height: 45px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    border-radius: 8px;
+    background: var(--admin-white);
+    color: var(--admin-header);
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.16);
+}
+
+.banned-list-search input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--admin-navy);
+    font-size: 14px;
+}
+
+.banned-list-search input::placeholder {
+    color: #9bc4ee;
+}
+
+.banned-filters {
+    display: flex;
+    align-items: stretch;
+    gap: 9px;
+}
+
+.filter-btn,
+.add-student-btn,
+.row-action {
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+.filter-btn,
+.add-student-btn {
+    min-height: 45px;
+    padding: 0 18px;
+    border-radius: 8px;
+    background: var(--admin-white);
+    color: var(--admin-navy);
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+.filter-btn.is-active,
+.add-student-btn {
+    background: #378ff2;
+    color: var(--admin-white);
+}
+
+.add-student-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.banned-user-list {
+    display: grid;
+    gap: 14px;
+}
+
+.banned-user-row {
+    min-height: 70px;
+    display: grid;
+    grid-template-columns: 49px minmax(150px, 1fr) 90px minmax(175px, auto) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 12px 12px 15px;
+    border-radius: 15px;
+    background: var(--admin-white);
+    color: var(--admin-navy);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.banned-user-avatar {
+    width: 45px;
+    height: 45px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--admin-avatar-blue);
+    color: var(--admin-navy);
+    font-size: 15px;
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.banned-user-copy strong,
+.banned-user-copy span {
+    display: block;
+}
+
+.banned-user-copy strong {
+    margin-bottom: 3px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.banned-user-copy span,
+.banned-user-course,
+.banned-user-date {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.banned-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+}
+
+.row-action {
+    min-width: 52px;
+    min-height: 27px;
+    padding: 0 12px;
+    border-radius: 8px;
+    color: var(--admin-navy);
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.16);
+}
+
+.row-action.view {
+    background: var(--admin-soft-blue);
+}
+
+.row-action.ban {
+    background: #ffbebe;
+}
+
+.row-action.unban {
+    background: var(--admin-green);
+}
+
 @media (max-width: 1180px) {
     .admin-header {
         grid-template-columns: 220px minmax(220px, 1fr);
@@ -397,9 +649,25 @@ body.admin-dashboard-page {
     }
 
     .admin-stats,
-    .admin-panels {
+    .admin-panels,
+    .banned-summary {
         grid-template-columns: 1fr;
         max-width: none;
+    }
+
+    .banned-toolbar,
+    .banned-user-row {
+        grid-template-columns: 1fr;
+    }
+
+    .banned-filters,
+    .banned-row-actions {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    .banned-user-date {
+        justify-self: start;
     }
 }
 
@@ -423,6 +691,18 @@ body.admin-dashboard-page {
     .admin-sidebar {
         min-height: auto;
         gap: 26px;
+        padding: 16px;
+    }
+
+    .admin-nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-nav-item {
+        min-height: 46px;
+        padding: 0 12px;
+        gap: 10px;
+        font-size: 14px;
     }
 
     .admin-main {
@@ -432,6 +712,47 @@ body.admin-dashboard-page {
     .admin-stats {
         grid-template-columns: 1fr;
         gap: 18px;
+    }
+
+    .banned-main {
+        min-height: auto;
+        padding: 24px 16px 32px;
+    }
+
+    .banned-table-panel {
+        min-height: auto;
+        padding: 14px;
+    }
+
+    .banned-filters {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .add-student-btn {
+        justify-content: center;
+        grid-column: 1 / -1;
+    }
+
+    .filter-btn,
+    .add-student-btn {
+        padding: 0 12px;
+        font-size: 14px;
+    }
+
+    .banned-user-row {
+        gap: 8px;
+        padding: 14px;
+    }
+
+    .banned-user-copy strong {
+        font-size: 15px;
+    }
+
+    .banned-user-copy span,
+    .banned-user-course,
+    .banned-user-date {
+        font-size: 13px;
     }
 }
 
