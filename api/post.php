@@ -3,7 +3,11 @@ require_once __DIR__ . '/../config/db.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 
-if (!isset($_SESSION['user']) || empty($_SESSION['user']['user_id'])) {
+$isForumReader = isset($_SESSION['user']['user_id']) || isset($_SESSION['admin']['admin_id']);
+$isForumWriter = isset($_SESSION['user']['user_id']);
+$isForumAdmin = isset($_SESSION['admin']['admin_id']);
+
+if (!$isForumReader) {
 	http_response_code(401);
 	echo json_encode([
 		'success' => false
@@ -13,6 +17,8 @@ if (!isset($_SESSION['user']) || empty($_SESSION['user']['user_id'])) {
 
 $postsCollection = db()->selectCollection('forum_posts');
 $commentsCollection = db()->selectCollection('comments');
+$usersCollection = db()->selectCollection('users');
+$pusher = build_pusher();
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $apiAction = trim((string) ($_GET['action'] ?? ''));
 
@@ -35,6 +41,11 @@ if (in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
 }
 
 if ($requestMethod === 'POST') {
+	if (!$isForumWriter) {
+		respond_error(401);
+		exit;
+	}
+
 	if ($apiAction === 'comment') {
 		create_comment($postsCollection, $commentsCollection);
 	} else {
@@ -45,14 +56,19 @@ if ($requestMethod === 'POST') {
 
 if ($requestMethod === 'GET') {
 	if ($apiAction === 'recent') {
-		get_recent_posts($postsCollection, $commentsCollection);
+		get_recent_posts($postsCollection, $commentsCollection, $usersCollection);
 	} else {
-		get_posts($postsCollection, $commentsCollection);
+		get_posts($postsCollection, $commentsCollection, $usersCollection);
 	}
 	exit;
 }
 
 if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
+	if (!$isForumWriter) {
+		respond_error(401);
+		exit;
+	}
+
 	if ($apiAction === 'comment') {
 		update_comment($commentsCollection);
 	} else {
@@ -62,6 +78,11 @@ if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
 }
 
 if ($requestMethod === 'DELETE') {
+	if (!$isForumWriter && !$isForumAdmin) {
+		respond_error(401);
+		exit;
+	}
+
 	if ($apiAction === 'comment') {
 		delete_comment($commentsCollection);
 	} else {
@@ -112,6 +133,15 @@ function create_post(mixed $postsCollection): void
 		return;
 	}
 
+	trigger_forum_event('post-created', [
+		'post_id' => $postId,
+		'group_id' => $groupId,
+		'user_id' => $userId,
+		'title' => $title,
+		'content' => $content,
+		'created_at' => format_mongo_date($now)
+	]);
+
 	if (!wants_json_response()) {
 		header('Location: ../pages/forums.php', true, 303);
 		return;
@@ -156,6 +186,7 @@ function create_comment(mixed $postsCollection, mixed $commentsCollection): void
 	$commentId = bin2hex(random_bytes(8));
 	$userId = current_user_id();
 	$now = new MongoDB\BSON\UTCDateTime();
+	$displayName = trim((string) ($_SESSION['user']['full_name'] ?? $_SESSION['user']['username'] ?? 'User'));
 
 	try {
 		$commentsCollection->insertOne([
@@ -170,10 +201,19 @@ function create_comment(mixed $postsCollection, mixed $commentsCollection): void
 		return;
 	}
 
+	trigger_forum_event('reply-created', [
+		'post_id' => $postId,
+		'comment_id' => $commentId,
+		'user_id' => $userId,
+		'content' => $content,
+		'created_at' => format_mongo_date($now)
+	]);
+
 	respond_success([
 		'comment_id' => $commentId,
 		'post_id' => $postId,
 		'user_id' => $userId,
+		'user_name' => $displayName,
 		'content' => $content,
 		'text' => $content,
 		'created_at' => date('Y-m-d H:i:s')
@@ -215,6 +255,12 @@ function update_comment(mixed $commentsCollection): void
 		return;
 	}
 
+	trigger_forum_event('reply-updated', [
+		'comment_id' => $commentId,
+		'user_id' => $userId,
+		'content' => $content
+	]);
+
 	respond_success([
 		'comment_id' => $commentId,
 		'content' => $content,
@@ -232,12 +278,15 @@ function delete_comment(mixed $commentsCollection): void
 	}
 
 	$userId = current_user_id();
+	$isAdmin = is_admin_session();
 
 	try {
-		$result = $commentsCollection->deleteOne([
-			'comment_id' => $commentId,
-			'user_id' => $userId
-		]);
+		$filter = ['comment_id' => $commentId];
+		if (!$isAdmin) {
+			$filter['user_id'] = $userId;
+		}
+
+		$result = $commentsCollection->deleteOne($filter);
 	} catch (Exception $e) {
 		respond_error(500);
 		return;
@@ -248,10 +297,15 @@ function delete_comment(mixed $commentsCollection): void
 		return;
 	}
 
+	trigger_forum_event('reply-deleted', [
+		'comment_id' => $commentId,
+		'user_id' => $userId
+	]);
+
 	respond_success();
 }
 
-function get_posts(mixed $postsCollection, mixed $commentsCollection): void
+function get_posts(mixed $postsCollection, mixed $commentsCollection, mixed $usersCollection): void
 {
 	$postId = trim((string) ($_GET['post_id'] ?? ''));
 
@@ -268,7 +322,7 @@ function get_posts(mixed $postsCollection, mixed $commentsCollection): void
 			return;
 		}
 
-		$replies = get_post_replies($commentsCollection, $postId);
+		$replies = get_post_replies($commentsCollection, $usersCollection, $postId);
 		respond_success(map_post_document($doc, $replies));
 		return;
 	}
@@ -292,7 +346,7 @@ function get_posts(mixed $postsCollection, mixed $commentsCollection): void
 	$posts = [];
 	foreach ($cursor as $doc) {
 		$currentPostId = $doc['post_id'] ?? '';
-		$replies = get_post_replies($commentsCollection, $currentPostId);
+		$replies = get_post_replies($commentsCollection, $usersCollection, $currentPostId);
 		$posts[] = map_post_document($doc, $replies);
 	}
 
@@ -369,6 +423,10 @@ function update_post(mixed $postsCollection): void
 		return;
 	}
 
+	$updateData['post_id'] = $postId;
+	$updateData['user_id'] = $userId;
+	trigger_forum_event('post-updated', $updateData);
+
 	respond_success();
 }
 
@@ -417,6 +475,11 @@ function delete_post(mixed $postsCollection, mixed $commentsCollection): void
 		return;
 	}
 
+	trigger_forum_event('post-deleted', [
+		'post_id' => $postId,
+		'user_id' => $userId
+	]);
+
 	respond_success();
 }
 
@@ -458,7 +521,7 @@ function respond_success(mixed $data = null, int $statusCode = 200): void
 	echo json_encode($response);
 }
 
-function get_post_replies(mixed $commentsCollection, string $postId): array
+function get_post_replies(mixed $commentsCollection, mixed $usersCollection, string $postId): array
 {
 	if ($postId === '') {
 		return [];
@@ -476,10 +539,21 @@ function get_post_replies(mixed $commentsCollection, string $postId): array
 	$replies = [];
 	foreach ($cursor as $comment) {
 		$text = $comment['content'] ?? '';
+		$replyUserName = '';
+		try {
+			$replyUser = $usersCollection->findOne(['user_id' => $comment['user_id'] ?? '']);
+			if ($replyUser) {
+				$replyUserName = trim((string) ($replyUser['full_name'] ?? $replyUser['username'] ?? ''));
+			}
+		} catch (Exception $e) {
+			$replyUserName = '';
+		}
+
 		$replies[] = [
 			'comment_id' => $comment['comment_id'] ?? '',
 			'post_id' => $comment['post_id'] ?? '',
 			'user_id' => $comment['user_id'] ?? '',
+			'user_name' => $replyUserName,
 			'content' => $text,
 			'text' => $text,
 			'created_at' => format_mongo_date($comment['created_at'] ?? null)
@@ -489,7 +563,7 @@ function get_post_replies(mixed $commentsCollection, string $postId): array
 	return $replies;
 }
 
-function get_recent_posts(mixed $postsCollection, mixed $commentsCollection, int $limit = 3): void
+function get_recent_posts(mixed $postsCollection, mixed $commentsCollection, mixed $usersCollection, int $limit = 3): void
 {
 	$requestedLimit = (int) ($_GET['limit'] ?? $limit);
 	if ($requestedLimit < 1) {
@@ -512,7 +586,7 @@ function get_recent_posts(mixed $postsCollection, mixed $commentsCollection, int
 	$posts = [];
 	foreach ($cursor as $doc) {
 		$currentPostId = $doc['post_id'] ?? '';
-		$replies = get_post_replies($commentsCollection, $currentPostId);
+		$replies = get_post_replies($commentsCollection, $usersCollection, $currentPostId);
 		$posts[] = map_post_document($doc, $replies);
 	}
 
@@ -538,6 +612,40 @@ function get_request_body(): array
 	return [];
 }
 
+function build_pusher(): ?Pusher\Pusher
+{
+	try {
+		$options = [
+			'cluster' => 'ap2',
+			'useTLS' => true
+		];
+
+		return new Pusher\Pusher(
+			'14db4509a104fa2c4d52',
+			'22eeaeff5739ab77e4cc',
+			'2150170',
+			$options
+		);
+	} catch (Exception $e) {
+		return null;
+	}
+}
+
+function trigger_forum_event(string $eventName, array $payload): void
+{
+	global $pusher;
+
+	if (!$pusher) {
+		return;
+	}
+
+	try {
+		$pusher->trigger('forum-channel', $eventName, $payload);
+	} catch (Exception $e) {
+		// Ignore pusher failures so the API still works.
+	}
+}
+
 function format_mongo_date(mixed $value): string
 {
 	if ($value instanceof MongoDB\BSON\UTCDateTime) {
@@ -561,7 +669,16 @@ function wants_json_response(): bool
 
 function current_user_id(): string
 {
-	return (string) ($_SESSION['user']['user_id'] ?? '');
+	if (isset($_SESSION['user']['user_id'])) {
+		return (string) $_SESSION['user']['user_id'];
+	}
+
+	return (string) ($_SESSION['admin']['admin_id'] ?? '');
+}
+
+function is_admin_session(): bool
+{
+	return isset($_SESSION['admin']['admin_id']);
 }
 
 function body_value(array $body, string $key, string $default = ''): string

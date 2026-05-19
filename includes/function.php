@@ -9,6 +9,90 @@ function csrf_fail(string $redirect): void
     exit;
 }
 
+function admin_seed(): void
+{
+    $admins = db()->selectCollection('admin');
+    $email = 'admin@gmail.com';
+
+    try {
+        $existing = $admins->findOne(['email' => $email]);
+        if ($existing) {
+            return;
+        }
+
+        $admins->insertOne([
+            'admin_id' => 'admin-001',
+            'full_name' => 'Admin',
+            'email' => $email,
+            'password_hash' => password_hash('admin123', PASSWORD_DEFAULT),
+            'created_at' => new MongoDB\BSON\UTCDateTime(),
+        ]);
+    } catch (MongoDB\Driver\Exception\Exception $e) {
+    }
+}
+
+function admin_login(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: ../pages/login.php');
+        exit;
+    }
+
+    $token = clean_text($_POST['_csrf_token'] ?? '');
+    if (!csrf_check($token)) {
+        csrf_fail('../pages/login.php');
+    }
+
+    admin_seed();
+
+    $email = clean_email($_POST['email'] ?? '');
+    $password = (string) ($_POST['password'] ?? '');
+
+    if ($email === '' || $password === '') {
+        $_SESSION['error'] = 'Please enter email and password.';
+        header('Location: ../pages/login.php');
+        exit;
+    }
+
+    $admins = db()->selectCollection('admin');
+    $admin = $admins->findOne(['email' => $email]);
+
+    if (!$admin || !password_verify($password, (string) ($admin['password_hash'] ?? ''))) {
+        $_SESSION['error'] = 'Invalid admin email or password.';
+        header('Location: ../pages/login.php');
+        exit;
+    }
+
+    session_regenerate_id(true);
+    $_SESSION['admin'] = [
+        'admin_id' => (string) ($admin['admin_id'] ?? 'admin-001'),
+        'full_name' => (string) ($admin['full_name'] ?? 'Admin'),
+        'email' => (string) ($admin['email'] ?? $email),
+    ];
+
+    header('Location: ../pages/admin_dashboard.php');
+    exit;
+}
+
+function admin_logout(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: ../pages/login.php');
+        exit;
+    }
+
+    $token = clean_text($_POST['_csrf_token'] ?? '');
+    if (!csrf_check($token)) {
+        csrf_fail('../pages/login.php');
+    }
+
+    unset($_SESSION['admin']);
+    session_regenerate_id(true);
+
+    header('Location: ../pages/login.php');
+    exit;
+}
+
 function handle_login_process(): void
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -27,6 +111,23 @@ function handle_login_process(): void
     if ($email === '' || $password === '') {
         $_SESSION['error'] = 'Please enter email and password.';
         header('Location: ../pages/login.php');
+        exit;
+    }
+
+    admin_seed();
+
+    $admins = db()->selectCollection('admin');
+    $admin = $admins->findOne(['email' => $email]);
+
+    if ($admin && password_verify($password, (string) ($admin['password_hash'] ?? ''))) {
+        session_regenerate_id(true);
+        $_SESSION['admin'] = [
+            'admin_id' => (string) ($admin['admin_id'] ?? 'admin-001'),
+            'full_name' => (string) ($admin['full_name'] ?? 'Admin'),
+            'email' => (string) ($admin['email'] ?? $email),
+        ];
+
+        header('Location: ../pages/admin_dashboard.php');
         exit;
     }
 

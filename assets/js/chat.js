@@ -591,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadMessages();
-    setInterval(loadMessages, 1000);
+    setInterval(loadMessages, 10000);
 
     // Load and display group members
     function loadGroupMembers() {

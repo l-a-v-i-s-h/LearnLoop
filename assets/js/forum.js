@@ -4,6 +4,10 @@
   const API_URL = "../api/post.php";
   const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
   const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute("content") || "" : "";
+  const PUSHER_KEY = "14db4509a104fa2c4d52";
+  const PUSHER_CLUSTER = "ap2";
+  const currentUserId = String(document.body?.getAttribute("data-user-id") || "");
+  const isAdminForum = document.body.classList.contains("admin-dashboard-page");
 
   // Questions are loaded from backend.
   let questions = [];
@@ -29,8 +33,15 @@
   const deleteConfirm = document.getElementById("forumDeleteConfirm");
   const deleteQuestionName = document.getElementById("forumDeleteQuestionName");
 
+  const replyDeleteModal = document.getElementById("forumReplyDeleteModal");
+  const replyDeleteCancel = document.getElementById("forumReplyDeleteCancel");
+  const replyDeleteConfirm = document.getElementById("forumReplyDeleteConfirm");
+  const replyDeleteText = document.getElementById("forumDeleteReplyText");
+
   let editingPostId = "";
   let pendingDeleteId = "";
+  let pendingReplyDeleteId = "";
+  let pendingReplyDeletePostId = "";
   let editingReplyPostId = "";
   let editingReplyId = "";
 
@@ -57,14 +68,38 @@
 
     return {
       id: String(post.post_id || post.id || ""),
+      ownerId: String(post.user_id || ""),
       title: String(post.title || ""),
       description: String(post.description || post.content || ""),
       date: formatDate(safeDate),
       replies: dbReplies.map((reply) => ({
         id: String(reply.comment_id || reply.id || ""),
-        text: String(reply.text || reply.content || "")
+        text: String(reply.text || reply.content || ""),
+        ownerId: String(reply.user_id || ""),
+        userName: String(reply.user_name || reply.userName || "")
       }))
     };
+  }
+
+  function canEditReply(reply) {
+    if (!reply) return false;
+    if (!reply.ownerId || !currentUserId) return false;
+    return reply.ownerId === currentUserId;
+  }
+
+  function canDeleteReply(reply) {
+    if (isAdminForum) return true;
+    return canEditReply(reply);
+  }
+
+  function canEditQuestion(question) {
+    if (!question) return false;
+    if (!question.ownerId || !currentUserId) return false;
+    return question.ownerId === currentUserId;
+  }
+
+  function canDeleteQuestion(question) {
+    return canEditQuestion(question);
   }
 
   async function loadQuestions() {
@@ -88,6 +123,47 @@
       console.error(error);
       alert("Could not load forum posts from database.");
     }
+  }
+
+  function refreshQuestionsSilently() {
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", API_URL, true);
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) return;
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const payload = JSON.parse(xhr.responseText || "{}");
+          if (payload && payload.success && Array.isArray(payload.data)) {
+            questions = payload.data.map(toQuestion).filter(q => q.id !== "");
+            render();
+          }
+        } catch (error) {
+          // Ignore bad JSON response.
+        }
+      }
+    };
+    xhr.send();
+  }
+
+  function initForumRealtime() {
+    if (!window.Pusher || !PUSHER_KEY) return;
+
+    const pusher = new window.Pusher(PUSHER_KEY, {
+      cluster: PUSHER_CLUSTER
+    });
+
+    const channel = pusher.subscribe("forum-channel");
+    const refresh = function () {
+      refreshQuestionsSilently();
+    };
+
+    channel.bind("post-created", refresh);
+    channel.bind("post-updated", refresh);
+    channel.bind("post-deleted", refresh);
+    channel.bind("reply-created", refresh);
+    channel.bind("reply-updated", refresh);
+    channel.bind("reply-deleted", refresh);
   }
 
   async function createQuestion(title, description) {
@@ -269,19 +345,30 @@
       const repliesHtml = replyCount === 0
         ? `<p class="no-replies">No replies yet. Be the first to respond.</p>`
         : `<div class="replies-list">
-            ${q.replies.map(r => `
+            ${q.replies.map(r => {
+              const canDelete = canDeleteReply(r);
+              const replyActions = canDelete
+                ? `
+                    <div class="reply-actions">
+                      <button type="button" class="q-link-action danger" data-action="delete-reply" data-id="${q.id}" data-reply-id="${r.id}" title="Delete reply" aria-label="Delete reply">
+                        <i class="fa-solid fa-trash"></i>
+                      </button>
+                    </div>
+                  `
+                : "";
+
+              const authorLabel = r.userName ? `<div class="reply-name">${esc(r.userName)}</div>` : "";
+
+              return `
                 <div class="reply-item">
-                  <p class="reply-text">${esc(r.text)}</p>
-                  <div class="reply-actions">
-                    <button type="button" class="q-link-action" data-action="edit-reply" data-id="${q.id}" data-reply-id="${r.id}" title="Edit reply" aria-label="Edit reply">
-                      <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
-                    <button type="button" class="q-link-action danger" data-action="delete-reply" data-id="${q.id}" data-reply-id="${r.id}" title="Delete reply" aria-label="Delete reply">
-                      <i class="fa-solid fa-trash"></i>
-                    </button>
+                  <div class="reply-content">
+                    ${authorLabel}
+                    <p class="reply-text">${esc(r.text)}</p>
                   </div>
+                  ${replyActions}
                 </div>
-            `).join("")}
+              `;
+            }).join("")}
           </div>`;
 
       const isEditingReplyForPost = editingReplyPostId === q.id && editingReplyId !== "";
@@ -292,6 +379,21 @@
       const replyTextValue = editingReply ? editingReply.text : "";
       const replyCancelHtml = isEditingReplyForPost
         ? `<button type="button" class="btn-cancel-reply-edit" data-action="cancel-reply-edit" data-id="${q.id}">Cancel</button>`
+        : "";
+
+      const canEdit = canEditQuestion(q);
+      const canDelete = canDeleteQuestion(q);
+      const actionsHtml = canEdit || canDelete
+        ? `
+              <div class="q-inline-actions">
+                ${canEdit ? `<button type="button" class="q-link-action" data-action="edit" data-id="${q.id}" title="Edit question" aria-label="Edit question">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>` : ""}
+                ${canDelete ? `<button type="button" class="q-link-action danger" data-action="delete" data-id="${q.id}" title="Delete question" aria-label="Delete question">
+                  <i class="fa-solid fa-trash"></i>
+                </button>` : ""}
+              </div>
+            `
         : "";
 
       return `
@@ -309,30 +411,25 @@
               <button class="q-toggle" data-action="toggle" data-id="${q.id}">
                 ${toggleLabel} <i class="fa-solid ${toggleIcon}"></i>
               </button>
-              <div class="q-inline-actions">
-                <button type="button" class="q-link-action" data-action="edit" data-id="${q.id}" title="Edit question" aria-label="Edit question">
-                  <i class="fa-solid fa-pen-to-square"></i>
-                </button>
-                <button type="button" class="q-link-action danger" data-action="delete" data-id="${q.id}" title="Delete question" aria-label="Delete question">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
-              </div>
+              ${actionsHtml}
             </div>
           </div>
           <div class="q-body" ${isOpen ? "" : "hidden"}>
             <div class="replies-label">ANSWERS / REPLIES</div>
             ${repliesHtml}
-            <form class="reply-form" data-action="reply-form" data-id="${q.id}">
-              <textarea
-                class="reply-input"
-                name="replyText"
-                placeholder="Write a reply..."
-                rows="1"
-                required
-              >${esc(replyTextValue)}</textarea>
-              <button type="submit" class="btn-reply">${replySubmitLabel}</button>
-              ${replyCancelHtml}
-            </form>
+            ${isAdminForum ? "" : `
+              <form class="reply-form" data-action="reply-form" data-id="${q.id}">
+                <textarea
+                  class="reply-input"
+                  name="replyText"
+                  placeholder="Write a reply..."
+                  rows="1"
+                  required
+                >${esc(replyTextValue)}</textarea>
+                <button type="submit" class="btn-reply">${replySubmitLabel}</button>
+                ${replyCancelHtml}
+              </form>
+            `}
           </div>
         </div>
       `;
@@ -379,6 +476,34 @@
     deleteModal.hidden = true;
   }
 
+  function openReplyDeleteModal(postId, replyId) {
+    if (!replyDeleteModal) return;
+
+    const question = questions.find(q => q.id === postId);
+    if (!question) return;
+
+    const reply = question.replies.find(r => r.id === replyId);
+    if (!reply) return;
+
+    pendingReplyDeletePostId = postId;
+    pendingReplyDeleteId = replyId;
+    if (replyDeleteText) {
+      const preview = String(reply.text || "").trim();
+      replyDeleteText.textContent = preview === "" ? "this reply" : preview.slice(0, 80);
+    }
+    replyDeleteModal.hidden = false;
+  }
+
+  function closeReplyDeleteModal() {
+    pendingReplyDeletePostId = "";
+    pendingReplyDeleteId = "";
+    if (replyDeleteText) {
+      replyDeleteText.textContent = "this reply";
+    }
+    if (!replyDeleteModal) return;
+    replyDeleteModal.hidden = true;
+  }
+
   askBtn.addEventListener("click", () => {
     if (askPanel.hidden) openAskPanel();
     else closeAskPanel();
@@ -421,6 +546,39 @@
     });
   }
 
+  if (replyDeleteCancel) {
+    replyDeleteCancel.addEventListener("click", closeReplyDeleteModal);
+  }
+
+  if (replyDeleteConfirm) {
+    replyDeleteConfirm.addEventListener("click", async () => {
+      if (!pendingReplyDeleteId || !pendingReplyDeletePostId) return;
+
+      replyDeleteConfirm.disabled = true;
+      replyDeleteConfirm.textContent = "Deleting...";
+
+      try {
+        await deleteReply(pendingReplyDeletePostId, pendingReplyDeleteId);
+        const question = questions.find(q => q.id === pendingReplyDeletePostId);
+        if (question) {
+          question.replies = question.replies.filter(r => r.id !== pendingReplyDeleteId);
+        }
+        if (editingReplyPostId === pendingReplyDeletePostId && editingReplyId === pendingReplyDeleteId) {
+          editingReplyPostId = "";
+          editingReplyId = "";
+        }
+        closeReplyDeleteModal();
+        render();
+      } catch (error) {
+        console.error(error);
+        alert(error.message || "Failed to delete reply.");
+      } finally {
+        replyDeleteConfirm.disabled = false;
+        replyDeleteConfirm.textContent = "Delete";
+      }
+    });
+  }
+
   if (deleteModal) {
     deleteModal.addEventListener("click", (e) => {
       if (e.target === deleteModal) {
@@ -429,9 +587,21 @@
     });
   }
 
+  if (replyDeleteModal) {
+    replyDeleteModal.addEventListener("click", (e) => {
+      if (e.target === replyDeleteModal) {
+        closeReplyDeleteModal();
+      }
+    });
+  }
+
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && deleteModal && !deleteModal.hidden) {
+    if (e.key !== "Escape") return;
+    if (deleteModal && !deleteModal.hidden) {
       closeDeleteModal();
+    }
+    if (replyDeleteModal && !replyDeleteModal.hidden) {
+      closeReplyDeleteModal();
     }
   });
 
@@ -492,6 +662,7 @@
 
       const reply = question.replies.find(r => r.id === replyId);
       if (!reply) return;
+      if (!canDeleteReply(reply)) return;
 
       editingReplyPostId = postId;
       editingReplyId = replyId;
@@ -528,36 +699,21 @@
 
       const reply = question.replies.find(r => r.id === replyId);
       if (!reply) return;
+      if (!canEditReply(reply)) return;
 
-      const confirmed = window.confirm("Delete this reply? This action cannot be undone.");
-      if (!confirmed) return;
-
-      deleteReplyBtn.disabled = true;
-      try {
-        await deleteReply(postId, replyId);
-        question.replies = question.replies.filter(r => r.id !== replyId);
-        if (editingReplyPostId === postId && editingReplyId === replyId) {
-          editingReplyPostId = "";
-          editingReplyId = "";
-        }
-        expanded.add(postId);
-        render();
-      } catch (error) {
-        console.error(error);
-        alert(error.message || "Failed to delete reply.");
-      } finally {
-        deleteReplyBtn.disabled = false;
-      }
+      openReplyDeleteModal(postId, replyId);
       return;
     }
 
     const editBtn = e.target.closest('button[data-action="edit"]');
     if (editBtn) {
+      if (isAdminForum) return;
       const id = String(editBtn.dataset.id || "");
       if (!id) return;
 
       const question = questions.find(q => q.id === id);
       if (!question) return;
+      if (!canDeleteQuestion(question)) return;
 
       editingPostId = id;
       questionTitle.value = question.title;
@@ -577,8 +733,13 @@
 
     const deleteBtn = e.target.closest('button[data-action="delete"]');
     if (deleteBtn) {
+      if (isAdminForum) return;
       const id = String(deleteBtn.dataset.id || "");
       if (!id) return;
+
+      const question = questions.find(q => q.id === id);
+      if (!question) return;
+      if (!canEditQuestion(question)) return;
 
       openDeleteModal(id);
       return;
@@ -612,6 +773,13 @@
     const replyToEdit = isReplyEdit
       ? question.replies.find(r => r.id === editingReplyId)
       : null;
+
+    if (isReplyEdit && replyToEdit && !canEditReply(replyToEdit)) {
+      editingReplyPostId = "";
+      editingReplyId = "";
+      render();
+      return;
+    }
 
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -657,4 +825,5 @@
 
   // Init
   loadQuestions();
+  initForumRealtime();
 })();
