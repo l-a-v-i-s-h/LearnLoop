@@ -18,9 +18,10 @@ $current_page = 'notes';
     <link rel="stylesheet" href="../assets/css/style.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="../assets/css/dashboard.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="../assets/css/notes.css?v=<?php echo $v; ?>">
+    <link rel="stylesheet" href="../assets/css/notifications.css?v=<?php echo $v; ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
-<body class="dashboard-layout">
+<body class="dashboard-layout" data-user-id="<?php echo esc($_SESSION['user']['user_id'] ?? ''); ?>">
 
     <?php include '../includes/header.php'; ?>
 
@@ -42,13 +43,13 @@ $current_page = 'notes';
             <div class="upload-panel" id="uploadPanel" hidden>
                 <div class="upload-panel-label">UPLOAD FORM</div>
                 <form id="uploadForm" class="upload-panel-row">
-                    <select id="targetGroup" class="inline-field" required>
-                        <option value="">Select group</option>
+                    <select id="targetGroup" class="inline-field">
+                        <option value="">Share publicly</option>
                     </select>
                     <button type="button" class="inline-field file-chooser" id="fileChooserBtn">
                         <span id="fileChooserLabel">Choose file ...</span>
                     </button>
-                    <input type="file" id="noteFileInput" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg" hidden>
+                    <input type="file" id="noteFileInput" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.zip" multiple hidden>
                     <button type="submit" class="btn-upload-inline">Upload</button>
                     <button type="button" class="btn-cancel-inline" id="uploadCancel">Cancel</button>
                 </form>
@@ -96,6 +97,7 @@ $current_page = 'notes';
         </div>
     </div>
 
+    <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
     <script src="../assets/js/notes.js?v=<?php echo $v; ?>"></script>
 </body>
 </html>

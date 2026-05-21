@@ -13,6 +13,10 @@ if (!isset($_SESSION['user'])) {
 }
 
 $notesCollection = db()->selectCollection('notes');
+$groupsCollection = db()->selectCollection('groups');
+$groupMembersCollection = db()->selectCollection('group_members');
+$chatCollection = db()->selectCollection('chat_messages');
+$pusher = build_pusher();
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if (in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
@@ -41,6 +45,8 @@ if ($requestMethod === 'POST') {
 if ($requestMethod === 'GET') {
 	if (isset($_GET['action']) && $_GET['action'] === 'download') {
 		download_note($notesCollection);
+	} elseif (isset($_GET['action']) && $_GET['action'] === 'count') {
+		get_notes_count($notesCollection);
 	} else {
 		get_notes($notesCollection);
 	}
@@ -59,7 +65,7 @@ echo json_encode([
 ]);
 exit;
 
-function create_note($notesCollection): void
+function create_note(mixed $notesCollection): void
 {
 	$body = get_request_body();
 
@@ -79,11 +85,49 @@ function create_note($notesCollection): void
 	$userId = $_SESSION['user']['user_id'];
 	$decodedContent = json_decode($content, true);
 	$groupId = '';
-	if (is_array($decodedContent) && !empty($decodedContent['group'])) {
-		$groupId = trim((string) $decodedContent['group']);
+	$groupName = 'Public';
+	$visibility = 'public';
+	$fileType = 'txt';
+	if (is_array($decodedContent)) {
+		$groupId = trim((string) ($decodedContent['groupId'] ?? $decodedContent['group_id'] ?? ''));
+		$groupName = trim((string) ($decodedContent['groupName'] ?? $decodedContent['group'] ?? 'Public'));
+		$visibility = trim((string) ($decodedContent['visibility'] ?? ''));
+		$fileType = trim((string) ($decodedContent['fileType'] ?? 'txt')) ?: 'txt';
 	}
-	if ($groupId === '') {
-		$groupId = 'general';
+
+	if ($groupId === '' || $visibility === 'public') {
+		$groupId = 'public';
+		$groupName = 'Public';
+		$visibility = 'public';
+	} else {
+		$group = $GLOBALS['groupsCollection']->findOne(['group_id' => $groupId]);
+		if (!$group) {
+			http_response_code(404);
+			echo json_encode([
+				'success' => false,
+				'message' => 'Group not found.'
+			]);
+			return;
+		}
+
+		$isOwner = (($group['user_id'] ?? '') === $userId);
+		$isMember = $GLOBALS['groupMembersCollection']->findOne([
+			'group_id' => $groupId,
+			'user_id' => $userId,
+			'role' => 'member'
+		]);
+
+		if (!$isOwner && !$isMember) {
+			http_response_code(403);
+			echo json_encode([
+				'success' => false,
+				'message' => 'You do not have permission to share to this group.'
+			]);
+			return;
+		}
+
+		$groupName = trim((string) ($group['group_name'] ?? $groupName)) ?: 'Shared group';
+		$visibility = 'private_group';
 	}
 
 	// Placeholder path string for now since actual binary file upload is not implemented yet.
@@ -95,6 +139,8 @@ function create_note($notesCollection): void
 			'note_id' => $noteId,
 			'user_id' => $userId,
 			'group_id' => $groupId,
+			'group_name' => $groupName,
+			'visibility' => $visibility,
 			'file_url' => $fileUrl,
 			'uploaded_at' => $now,
 			'title' => $title,
@@ -111,6 +157,46 @@ function create_note($notesCollection): void
 		return;
 	}
 
+	trigger_note_event('note-created', [
+		'user_id' => $userId,
+		'note_id' => $noteId,
+		'title' => $title,
+		'content' => $content,
+		'group_id' => $groupId,
+		'group_name' => $groupName,
+		'visibility' => $visibility,
+		'created_at' => format_mongo_date($now)
+	]);
+
+	if ($visibility === 'private_group' && $groupId !== 'public') {
+		$postToChat = $GLOBALS['chatCollection'] ?? null;
+		if ($postToChat) {
+			try {
+				$chatMessageId = bin2hex(random_bytes(8));
+				$postToChat->insertOne([
+					'message_id' => $chatMessageId,
+					'group' => $groupName,
+					'user_id' => $userId,
+					'sender_name' => $_SESSION['user']['full_name'] ?? 'User',
+					'type' => 'note',
+					'message' => 'Shared a study note',
+					'note_id' => $noteId,
+					'note_title' => $title,
+					'note_group_id' => $groupId,
+					'note_group_name' => $groupName,
+					'note_visibility' => $visibility,
+					'file_name' => '',
+					'file_path' => '',
+					'file_size' => 0,
+					'edited' => false,
+					'created_at' => $now
+				]);
+			} catch (Exception $e) {
+				// Do not fail note upload if chat post fails.
+			}
+		}
+	}
+
 	http_response_code(201);
 	echo json_encode([
 		'success' => true,
@@ -118,18 +204,27 @@ function create_note($notesCollection): void
 		'data' => [
 			'note_id' => $noteId,
 			'title' => $title,
-			'content' => $content
+			'content' => $content,
+			'group_id' => $groupId,
+			'group_name' => $groupName,
+			'visibility' => $visibility,
+			'user_id' => $userId
 		]
 	]);
 }
 
-function get_notes($notesCollection): void
+function get_notes(mixed $notesCollection): void
 {
 	$userId = $_SESSION['user']['user_id'];
 
 	try {
 		$cursor = $notesCollection->find(
-			['user_id' => $userId],
+			[
+				'$or' => [
+					['visibility' => 'public'],
+					['user_id' => $userId]
+				]
+			],
 			['sort' => ['uploaded_at' => -1, 'created_at' => -1]]
 		);
 	} catch (Exception $e) {
@@ -143,10 +238,22 @@ function get_notes($notesCollection): void
 
 	$notes = [];
 	foreach ($cursor as $doc) {
+		$visibility = $doc['visibility'] ?? (($doc['group_id'] ?? 'public') === 'public' ? 'public' : 'private_group');
+		$isOwn = (($doc['user_id'] ?? '') === $userId);
+		if ($visibility !== 'public' && !$isOwn) {
+			continue;
+		}
+
 		$notes[] = [
 			'note_id' => $doc['note_id'] ?? '',
+			'user_id' => $doc['user_id'] ?? '',
 			'title' => $doc['title'] ?? '',
 			'content' => $doc['content'] ?? '',
+			'group_id' => $doc['group_id'] ?? 'public',
+			'group_name' => $doc['group_name'] ?? ($visibility === 'public' ? 'Public' : 'Shared group'),
+			'visibility' => $visibility,
+			'can_delete' => $isOwn,
+			'can_download' => ($visibility === 'public' || $isOwn),
 			'created_at' => format_mongo_date($doc['created_at'] ?? ($doc['uploaded_at'] ?? null)),
 			'updated_at' => format_mongo_date($doc['updated_at'] ?? null)
 		];
@@ -159,7 +266,7 @@ function get_notes($notesCollection): void
 	]);
 }
 
-function delete_note($notesCollection): void
+function delete_note(mixed $notesCollection): void
 {
 	$body = get_request_body();
 	$noteId = safe_input($body['note_id'] ?? ($_GET['note_id'] ?? ''), 80);
@@ -202,9 +309,14 @@ function delete_note($notesCollection): void
 		'success' => true,
 		'message' => 'Note deleted successfully.'
 	]);
+
+	trigger_note_event('note-deleted', [
+		'user_id' => $userId,
+		'note_id' => $noteId
+	]);
 }
 
-function download_note($notesCollection): void
+function download_note(mixed $notesCollection): void
 {
 	$noteId = safe_input($_GET['note_id'] ?? '', 80);
 
@@ -219,11 +331,12 @@ function download_note($notesCollection): void
 	}
 
 	$userId = $_SESSION['user']['user_id'];
+	$groupsCollection = db()->selectCollection('groups');
+	$groupMembersCollection = db()->selectCollection('group_members');
 
 	try {
 		$note = $notesCollection->findOne([
-			'note_id' => $noteId,
-			'user_id' => $userId
+			'note_id' => $noteId
 		]);
 	} catch (Exception $e) {
 		http_response_code(500);
@@ -245,6 +358,40 @@ function download_note($notesCollection): void
 		return;
 	}
 
+	$visibility = $note['visibility'] ?? (($note['group_id'] ?? 'public') === 'public' ? 'public' : 'private_group');
+	$isOwner = (($note['user_id'] ?? '') === $userId);
+
+	if ($visibility !== 'public' && !$isOwner) {
+		$groupId = $note['group_id'] ?? '';
+		$group = $groupId !== '' ? $groupsCollection->findOne(['group_id' => $groupId]) : null;
+		if (!$group) {
+			http_response_code(403);
+			header('Content-Type: application/json; charset=UTF-8');
+			echo json_encode([
+				'success' => false,
+				'message' => 'You do not have access to this note.'
+			]);
+			return;
+		}
+
+		$isGroupOwner = (($group['user_id'] ?? '') === $userId);
+		$isGroupMember = $groupMembersCollection->findOne([
+			'group_id' => $groupId,
+			'user_id' => $userId,
+			'role' => 'member'
+		]);
+
+		if (!$isGroupOwner && !$isGroupMember) {
+			http_response_code(403);
+			header('Content-Type: application/json; charset=UTF-8');
+			echo json_encode([
+				'success' => false,
+				'message' => 'You do not have access to this note.'
+			]);
+			return;
+		}
+	}
+
 	// Generate file content
 	$title = $note['title'] ?? 'document';
 	$content = $note['content'] ?? '';
@@ -252,10 +399,11 @@ function download_note($notesCollection): void
 	// Parse content to get file info
 	$contentData = json_decode($content, true);
 	$fileType = $contentData['fileType'] ?? 'txt';
+	$groupLabel = $note['group_name'] ?? ($contentData['groupName'] ?? ($visibility === 'public' ? 'Public' : 'Shared group'));
 
 	// Create simple text file for download
 	$fileContent = "Title: " . $title . "\n";
-	$fileContent .= "Group: " . ($contentData['group'] ?? 'N/A') . "\n";
+	$fileContent .= "Group: " . $groupLabel . "\n";
 	$fileContent .= "Date: " . (isset($note['created_at']) ? format_mongo_date($note['created_at']) : date('Y-m-d H:i:s')) . "\n";
 	$fileContent .= "---\n\n";
 	$fileContent .= "Content: " . $content . "\n";
@@ -293,7 +441,41 @@ function get_request_body(): array
 	return [];
 }
 
-function format_mongo_date($value): string
+function build_pusher(): ?Pusher\Pusher
+{
+	try {
+		$options = [
+			'cluster' => 'ap2',
+			'useTLS' => true
+		];
+
+		return new Pusher\Pusher(
+			'14db4509a104fa2c4d52',
+			'22eeaeff5739ab77e4cc',
+			'2150170',
+			$options
+		);
+	} catch (Exception $e) {
+		return null;
+	}
+}
+
+function trigger_note_event(string $eventName, array $payload): void
+{
+	global $pusher;
+
+	if (!$pusher) {
+		return;
+	}
+
+	try {
+		$pusher->trigger('notes-channel', $eventName, $payload);
+	} catch (Exception $e) {
+		// Ignore pusher failures so the API still works.
+	}
+}
+
+function format_mongo_date(mixed $value): string
 {
 	if ($value instanceof MongoDB\BSON\UTCDateTime) {
 		$value = $value->toDateTime();
@@ -301,5 +483,48 @@ function format_mongo_date($value): string
 	}
 
 	return '';
+}
+
+function get_notes_count(mixed $notesCollection): void
+{
+	$userId = $_SESSION['user']['user_id'];
+
+	try {
+		$cursor = $notesCollection->find(
+			[
+				'$or' => [
+					['visibility' => 'public'],
+					['user_id' => $userId]
+				]
+			],
+			['sort' => ['uploaded_at' => -1, 'created_at' => -1]]
+		);
+
+		$userNotesCount = 0;
+		foreach ($cursor as $doc) {
+			$visibility = $doc['visibility'] ?? (($doc['group_id'] ?? 'public') === 'public' ? 'public' : 'private_group');
+			$isOwn = (($doc['user_id'] ?? '') === $userId);
+			if ($visibility !== 'public' && !$isOwn) {
+				continue;
+			}
+
+			$userNotesCount++;
+		}
+		
+		http_response_code(200);
+		echo json_encode([
+			'success' => true,
+			'message' => 'Notes count fetched successfully.',
+			'data' => [
+				'count' => $userNotesCount
+			]
+		]);
+	} catch (Exception $e) {
+		http_response_code(500);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Failed to fetch notes count.'
+		]);
+	}
 }
 

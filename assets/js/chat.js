@@ -12,10 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const csrfToken = csrfMeta ? (csrfMeta.getAttribute('content') || '') : '';
     let activeInlineEdit = null;
     let skipOutsideCloseOnce = false;
-    let pendingFile = null;
+    let pendingFiles = [];
+    const MAX_UPLOAD_COUNT = 5;
+    const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 MB
+    const ALLOWED_EXT = ['pdf','doc','docx','ppt','pptx','txt','png','jpg','jpeg','zip'];
 
     function resetPendingFile() {
-        pendingFile = null;
+        pendingFiles = [];
 
         if (fileInput) {
             fileInput.value = '';
@@ -84,7 +87,17 @@ document.addEventListener('DOMContentLoaded', () => {
         let bubbleHtml = esc(item.message || '');
         let actionsHtml = '';
 
-        if (item.type === 'file') {
+        if (item.type === 'note') {
+            const noteTitle = esc(item.note_title || item.message || 'Shared note');
+            const noteGroup = esc(item.note_group_name || 'Shared note');
+            const noteUrl = '../api/notes.php?action=download&note_id=' + encodeURIComponent(String(item.note_id || ''));
+            bubbleHtml = '<div class="shared-note-card">'
+                + '<div class="shared-note-chip">Study Note</div>'
+                + '<h4 class="shared-note-title">' + noteTitle + '</h4>'
+                + '<p class="shared-note-meta">' + noteGroup + '</p>'
+                + '<a class="shared-note-link" href="' + noteUrl + '" target="_blank" rel="noopener">Open note</a>'
+                + '</div>';
+        } else if (item.type === 'file') {
             bubbleHtml = '<a class="file-link" href="../' + esc(item.file_path || '') + '" target="_blank" rel="noopener">'
                 + esc(item.file_name || 'File')
                 + '</a><small class="file-meta">' + formatFileSize(item.file_size) + '</small>';
@@ -221,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const submitInlineEdit = async () => {
             const message = input.value.trim();
             if (!message) {
-                alert('Message cannot be empty.');
+                notify('error', 'Message cannot be empty.');
                 return;
             }
 
@@ -245,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cancelBtn.disabled = false;
 
             if (!data.success) {
-                alert(data.message || 'Failed to edit message.');
+                notify('error', data.message || 'Failed to edit message.');
                 return;
             }
 
@@ -345,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cancelBtn.disabled = false;
 
             if (!data.success) {
-                alert(data.message || 'Failed to unsend message.');
+                notify('error', data.message || 'Failed to unsend message.');
                 return;
             }
 
@@ -379,8 +392,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (pendingFile) {
-            await sendFileMessage(pendingFile);
+        if (pendingFiles && pendingFiles.length > 0) {
+            await sendFileMessage(pendingFiles);
             return;
         }
 
@@ -406,8 +419,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await response.json();
         sendBtn.disabled = false;
 
-        if (!data.success) {
-            alert(data.message || 'Failed to send message.');
+            if (!data.success) {
+            notify('error', data.message || 'Failed to send message.');
             return;
         }
 
@@ -415,14 +428,19 @@ document.addEventListener('DOMContentLoaded', () => {
         await loadMessages();
     }
 
-    async function sendFileMessage(file) {
-        if (!file || !attachBtn) {
-            return;
-        }
+    async function sendFileMessage(files) {
+        if (!files || !attachBtn) return;
 
         const formData = new FormData();
         formData.append('group', groupName);
-        formData.append('file', file);
+
+        if (!Array.isArray(files)) {
+            files = [files];
+        }
+
+        for (let i = 0; i < files.length; i++) {
+            formData.append('file[]', files[i], files[i].name);
+        }
 
         attachBtn.disabled = true;
 
@@ -437,13 +455,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await response.json();
         attachBtn.disabled = false;
 
-        if (!data.success) {
-            alert(data.message || 'Failed to send file.');
+            if (!data.success) {
+            let msg = data.message || 'Failed to send file.';
+            if (data.errors && Array.isArray(data.errors)) {
+                msg += '\n' + data.errors.map(e => (e.file ? e.file + ': ' : '') + (e.message || e.code)).join('\n');
+            }
+            notify('error', msg);
             return;
         }
 
         resetPendingFile();
-
         await loadMessages();
     }
 
@@ -453,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (msgInput) {
         msgInput.addEventListener('keydown', (event) => {
-            if (pendingFile && (event.key === 'Backspace' || event.key === 'Delete' || event.key === 'Escape')) {
+            if (pendingFiles && pendingFiles.length > 0 && (event.key === 'Backspace' || event.key === 'Delete' || event.key === 'Escape')) {
                 event.preventDefault();
                 resetPendingFile();
                 return;
@@ -472,14 +493,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         fileInput.addEventListener('change', () => {
-            const selected = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
-            if (selected) {
-                pendingFile = selected;
-                if (msgInput) {
-                    msgInput.value = selected.name;
-                    msgInput.readOnly = true;
-                    msgInput.title = 'Press Backspace to cancel selected file';
-                }
+            const list = fileInput.files ? Array.from(fileInput.files) : [];
+            if (!list || list.length === 0) return;
+
+            if (list.length > MAX_UPLOAD_COUNT) {
+                notify('error', 'You can upload up to ' + MAX_UPLOAD_COUNT + ' files only.');
+                fileInput.value = '';
+                return;
+            }
+
+            // simple client-side validation
+            for (const f of list) {
+                if (f.size <= 0) { notify('error','One of the selected files is empty.'); fileInput.value = ''; return; }
+                if (f.size > MAX_UPLOAD_BYTES) { notify('error','Each file must be ' + (MAX_UPLOAD_BYTES / (1024*1024)) + ' MB or less.'); fileInput.value = ''; return; }
+                const name = f.name || '';
+                const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+                if (!ALLOWED_EXT.includes(ext)) { notify('error','Unsupported file type: .' + ext); fileInput.value = ''; return; }
+            }
+
+            pendingFiles = list;
+            if (msgInput) {
+                msgInput.value = pendingFiles.map(f => f.name).join(', ');
+                msgInput.readOnly = true;
+                msgInput.title = 'Press Backspace to cancel selected files';
             }
         });
     }
@@ -555,6 +591,56 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadMessages();
+    setInterval(loadMessages, 1000);
+
+    // Load and display group members
+    function loadGroupMembers() {
+        const memberListEl = document.querySelector('.member-list-figma');
+        if (!memberListEl) return;
+
+        try {
+                const membersJson = chatBox ? (chatBox.dataset.members || '[]') : '[]';
+                let members = [];
+                try {
+                    members = JSON.parse(membersJson);
+                } catch (err) {
+                    console.error('Failed to parse members JSON:', err, membersJson);
+                    members = [];
+                }
+            
+            if (!Array.isArray(members) || members.length === 0) {
+                memberListEl.innerHTML = '<div class="member-item"><span class="user-icon"></span> <div><strong>No members</strong></div></div>';
+                return;
+            }
+
+            // Update member count
+            const memberHeader = document.querySelector('.members-header-inline small');
+            if (memberHeader) {
+                const count = members.length;
+                memberHeader.textContent = count + ' member' + (count !== 1 ? 's' : '');
+            }
+
+            // Render members
+            memberListEl.innerHTML = members.map(member => {
+                const isYou = member.user_id === currentUserId;
+                const displayName = isYou ? 'You' : member.full_name;
+                const roleText = member.role === 'owner' ? 'Owner' : 'Member';
+                
+                return `<div class="member-item">
+                    <span class="user-icon"></span>
+                    <div>
+                        <strong>${esc(displayName)}</strong>
+                        <p>${roleText}</p>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch (error) {
+            console.error('Error parsing members:', error);
+            memberListEl.innerHTML = '<div class="member-item"><span class="user-icon"></span> <div><strong>Error loading members</strong></div></div>';
+        }
+    }
+
+    loadGroupMembers();
 
     const addBtn = document.getElementById('addMemberBtn');
     const inviteCard = document.getElementById('inviteCard');
@@ -562,32 +648,212 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmBtn = document.getElementById('confirmInvite');
     const toast = document.getElementById('inviteToast');
     const emailInput = document.getElementById('inviteEmail');
+    const groupId = chatBox ? (chatBox.dataset.groupId || '') : '';
 
-    if (!addBtn || !inviteCard || !cancelBtn || !confirmBtn || !toast || !emailInput) {
-        return;
+    // Add event listeners only for elements that exist
+    if (addBtn && inviteCard && emailInput) {
+        addBtn.addEventListener('click', () => {
+            inviteCard.style.display = 'block';
+            emailInput.focus();
+        });
     }
 
-    addBtn.addEventListener('click', () => {
-        inviteCard.style.display = 'block';
-    });
-
-    cancelBtn.addEventListener('click', () => {
-        inviteCard.style.display = 'none';
-        emailInput.value = '';
-    });
-
-    confirmBtn.addEventListener('click', () => {
-        if (emailInput.value.trim() !== "") {
+    if (cancelBtn && inviteCard && emailInput) {
+        cancelBtn.addEventListener('click', () => {
             inviteCard.style.display = 'none';
             emailInput.value = '';
-            
-            toast.style.display = 'block';
-            
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 3000);
-        } else {
-            alert("Please enter an email address.");
+        });
+    }
+
+    if (confirmBtn && emailInput && inviteCard && toast) {
+        confirmBtn.addEventListener('click', async () => {
+        const email = emailInput.value.trim();
+        
+        if (email === "") {
+            notify('error', "Please enter an email address.");
+            return;
         }
-    });
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            notify('error', "Please enter a valid email address.");
+            return;
+        }
+
+        if (!groupId) {
+            notify('error', "Group information not found.");
+            return;
+        }
+
+        confirmBtn.disabled = true;
+
+        try {
+            const response = await fetch('../api/notifications.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({
+                    action: 'send_invite',
+                    recipient_email: email,
+                    group_id: groupId
+                })
+            });
+
+            const data = await response.json();
+            confirmBtn.disabled = false;
+
+            if (data.success) {
+                inviteCard.style.display = 'none';
+                emailInput.value = '';
+                
+                toast.style.display = 'block';
+                toast.textContent = 'Invitation sent successfully!';
+                
+                setTimeout(() => {
+                    toast.style.display = 'none';
+                }, 3000);
+            } else {
+                notify('error', data.message || 'Failed to send invitation');
+            }
+        } catch (error) {
+            confirmBtn.disabled = false;
+            console.error('Error sending invitation:', error);
+            notify('error', 'An error occurred while sending the invitation.');
+        }
+        });
+    }
+
+    // Allow pressing Enter to send invite
+    if (emailInput && confirmBtn) {
+        emailInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                confirmBtn.click();
+            }
+        });
+    }
+
+    // Load pending invitations for group owner
+    const isOwner = chatBox ? (chatBox.dataset.isOwner === 'true') : false;
+    const groupIdForPending = chatBox ? (chatBox.dataset.groupId || '') : '';
+    
+    if (isOwner && groupIdForPending) {
+        loadPendingInvitations();
+        // Refresh pending invitations every 15 seconds
+        setInterval(loadPendingInvitations, 15000);
+    }
+
+    async function loadPendingInvitations() {
+        try {
+            const response = await fetch('../api/notifications.php?action=pending_invitations');
+            const data = await response.json();
+            
+            if (data.success && Array.isArray(data.data)) {
+                const groupPending = data.data.filter(inv => inv.group_id === groupIdForPending);
+                renderPendingInvitations(groupPending);
+            }
+        } catch (error) {
+            console.error('Failed to load pending invitations:', error);
+        }
+    }
+
+    function renderPendingInvitations(pending) {
+        const section = document.getElementById('pendingInvitationsSection');
+        const list = document.getElementById('pendingList');
+        
+        if (!section || !list) return;
+        
+        if (pending.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+        
+        section.style.display = 'block';
+        list.innerHTML = pending.map(inv => `
+            <div style="padding: 10px; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div style="flex: 1; min-width: 0;">
+                    <p style="margin: 0 0 4px; font-size: 13px; color: #333; word-break: break-all;">${esc(inv.recipient_email)}</p>
+                    <small style="color: #999; font-size: 12px;">${formatTime(inv.created_at)}</small>
+                </div>
+                <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                    <button
+                        class="pending-btn-withdraw"
+                        onclick="handleAdminResponse('${esc(inv.notification_id)}', 'withdraw')"
+                        style="padding: 6px 10px; background: #f97316; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;"
+                        title="Withdraw invitation"
+                    >
+                        Withdraw
+                    </button>
+                    <button 
+                        class="pending-btn-decline" 
+                        onclick="handleAdminResponse('${esc(inv.notification_id)}', 'decline')"
+                        style="padding: 4px 8px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;"
+                    >
+                        ✕
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function formatTime(dateString) {
+        if (!dateString) return '';
+        
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = now - date;
+        
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return minutes + ' min ago';
+        if (hours < 24) return hours + ' hour' + (hours > 1 ? 's' : '') + ' ago';
+        if (days < 7) return days + ' day' + (days > 1 ? 's' : '') + ' ago';
+
+        return date.toLocaleDateString();
+    }
+
+    window.handleAdminResponse = async (notificationId, response) => {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        
+        try {
+            const fetchOptions = {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({
+                    action: 'admin_respond',
+                    notification_id: notificationId,
+                    response: response
+                })
+            };
+
+            const apiResponse = await fetch('../api/notifications.php', fetchOptions);
+            const data = await apiResponse.json();
+
+            if (data.success) {
+                if (response === 'withdraw') {
+                    notify('info', 'Invitation withdrawn.');
+                } else if (response === 'approve') {
+                    notify('success', 'Member approved!');
+                } else {
+                    notify('info', 'Invitation declined');
+                }
+                // Reload pending invitations
+                await loadPendingInvitations();
+            } else {
+                notify('error', data.message || 'Failed to process request');
+            }
+        } catch (error) {
+            console.error('Error handling admin response:', error);
+            notify('error', 'An error occurred');
+        }
+    };
 });

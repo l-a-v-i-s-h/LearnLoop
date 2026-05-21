@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
-$status = $_GET['status'] ?? '';
+
+$error = $_SESSION['error'] ?? '';
+$success = $_SESSION['success'] ?? '';
+unset($_SESSION['error'], $_SESSION['success']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -26,6 +29,7 @@ $status = $_GET['status'] ?? '';
             </div>
 
             <form action="../api/auth.php?action=recover" method="POST">
+                <?php echo csrf_input(); ?>
                 <div class="input-box">
                     <i class="fa-regular fa-user"></i>
                     <input type="email" name="email" placeholder="Enter your email" required>
@@ -36,8 +40,14 @@ $status = $_GET['status'] ?? '';
                 </div>
             </form>
 
-            <?php if ($status === 'success'): ?>
-                <div class="success-msg">Link has been successfully sent to your email !</div>
+            <?php if ($error !== ''): ?>
+                <div style="background:#fee; color:#900; padding:10px; border-radius:8px; margin-top:10px; font-weight:600; font-size:14px;">
+                    <?php echo esc($error); ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($success !== ''): ?>
+                <div class="success-msg"><?php echo esc($success); ?></div>
             <?php endif; ?>
         </div>
 

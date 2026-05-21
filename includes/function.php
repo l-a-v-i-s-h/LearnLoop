@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/email-verification.php';
 
 function csrf_fail(string $redirect): void
 {
@@ -113,8 +114,17 @@ function handle_register_process(): void
         exit;
     }
 
-    $_SESSION['success'] = 'Account created. Please sign in.';
-    header('Location: ../pages/login.php');
+    $_SESSION['temp_email'] = $email;
+    $_SESSION['user_id_pending'] = $userId;
+
+    if (!send_verification_email($email, $fullname)) {
+        $_SESSION['error'] = $_SESSION['error'] ?? 'Verification email could not be sent.';
+        header('Location: ../pages/register.php');
+        exit;
+    }
+
+    $_SESSION['success'] = 'Please check your email for verification code.';
+    header('Location: ../pages/verification.php');
     exit;
 }
 
@@ -174,6 +184,82 @@ function handle_profile_update_process(): void
     $_SESSION['user']['full_name'] = $fullName;
     $_SESSION['success'] = 'Profile updated successfully.';
 
+    header('Location: ../pages/profile.php');
+    exit;
+}
+
+function handle_pass_change(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    $token = clean_text($_POST['_csrf_token'] ?? '');
+    if (!csrf_check($token)) {
+        csrf_fail('../pages/profile.php');
+    }
+
+    if (!isset($_SESSION['user']['user_id'])) {
+        header('Location: ../pages/login.php');
+        exit;
+    }
+
+    $uid = $_SESSION['user']['user_id'];
+    $cur = (string) ($_POST['cur_pass'] ?? '');
+    $new = (string) ($_POST['new_pass'] ?? '');
+    $conf = (string) ($_POST['conf_pass'] ?? '');
+
+    if ($cur === '' || $new === '' || $conf === '') {
+        $_SESSION['error'] = 'Please fill all password fields.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    if ($new !== $conf) {
+        $_SESSION['error'] = 'New passwords do not match.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    if (strlen($new) < 6) {
+        $_SESSION['error'] = 'New password should be at least 6 characters.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    $users = db()->selectCollection('users');
+    $user = $users->findOne(['user_id' => $uid]);
+
+    if (!$user) {
+        $_SESSION['error'] = 'User not found.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    if (!password_verify($cur, $user['password_hash'])) {
+        $_SESSION['error'] = 'Current password is incorrect.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    $newHash = password_hash($new, PASSWORD_DEFAULT);
+
+    try {
+        $res = $users->updateOne(['user_id' => $uid], ['$set' => ['password_hash' => $newHash]]);
+    } catch (MongoDB\Driver\Exception\Exception $e) {
+        $_SESSION['error'] = 'Password update failed. Try again.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    if ($res->getMatchedCount() === 0) {
+        $_SESSION['error'] = 'Password update failed.';
+        header('Location: ../pages/profile.php');
+        exit;
+    }
+
+    $_SESSION['success'] = 'Password updated successfully.';
     header('Location: ../pages/profile.php');
     exit;
 }

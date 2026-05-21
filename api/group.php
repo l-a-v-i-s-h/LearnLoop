@@ -79,8 +79,37 @@ if ($method === 'POST') {
 }
 
 if ($method === 'GET') {
+	// Handle count action
+	if (isset($_GET['action']) && $_GET['action'] === 'count') {
+		try {
+			$groupMembers = db()->selectCollection('group_members');
+			
+			// Count groups owned by user
+			$ownedCount = $groups->countDocuments(['user_id' => $userId]);
+			
+			// Count groups where user is a member
+			$membershipRecords = $groupMembers->find(['user_id' => $userId, 'role' => 'member']);
+			$memberCount = iterator_count($membershipRecords);
+			
+			$totalCount = $ownedCount + $memberCount;
+			
+			respond(200, true, 'Group count fetched successfully.', [
+				'owned' => $ownedCount,
+				'member' => $memberCount,
+				'total' => $totalCount
+			]);
+			exit;
+		} catch (Exception $e) {
+			respond(500, false, 'Failed to fetch group count.');
+			exit;
+		}
+	}
+	
 	$list = [];
 	try {
+		$groupMembers = db()->selectCollection('group_members');
+		
+		// Get groups owned by user
 		$cursor = $groups->find(['user_id' => $userId], ['sort' => ['created_at' => -1]]);
 		foreach ($cursor as $doc) {
 			$created = '';
@@ -93,8 +122,35 @@ if ($method === 'GET') {
 				'subject' => $doc['subject'] ?? '',
 				'description' => $doc['description'] ?? '',
 				'owner_name' => $doc['owner_name'] ?? '',
-				'created_at' => $created
+				'created_at' => $created,
+				'role' => 'owner'
 			];
+		}
+		
+		// Get groups where user is a member
+		$memberCursor = $groupMembers->find(['user_id' => $userId, 'role' => 'member']);
+		$memberGroupIds = [];
+		foreach ($memberCursor as $member) {
+			$memberGroupIds[] = $member['group_id'];
+		}
+		
+		if (!empty($memberGroupIds)) {
+			$memberGroupsCursor = $groups->find(['group_id' => ['$in' => $memberGroupIds]], ['sort' => ['created_at' => -1]]);
+			foreach ($memberGroupsCursor as $doc) {
+				$created = '';
+				if (isset($doc['created_at']) && $doc['created_at'] instanceof MongoDB\BSON\UTCDateTime) {
+					$created = $doc['created_at']->toDateTime()->format('Y-m-d H:i:s');
+				}
+				$list[] = [
+					'group_id' => $doc['group_id'] ?? '',
+					'group_name' => $doc['group_name'] ?? '',
+					'subject' => $doc['subject'] ?? '',
+					'description' => $doc['description'] ?? '',
+					'owner_name' => $doc['owner_name'] ?? '',
+					'created_at' => $created,
+					'role' => 'member'
+				];
+			}
 		}
 	} catch (Exception $e) {
 		respond(500, false, 'Failed to fetch groups.');
@@ -147,7 +203,7 @@ function read_body(): array
 	return is_array($data) ? $data : [];
 }
 
-function respond(int $code, bool $ok, string $message, $data = null): void
+function respond(int $code, bool $ok, string $message, mixed $data = null): void
 {
 	http_response_code($code);
 	$out = ['success' => $ok, 'message' => $message];
