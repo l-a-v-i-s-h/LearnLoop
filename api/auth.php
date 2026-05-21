@@ -11,6 +11,10 @@ if ($action === 'login') {
 	handle_login_process();
 }
 
+if ($action === 'admin-logout') {
+	admin_logout();
+}
+
 if ($action === 'profile-update') {
 	handle_profile_update_process();
 }

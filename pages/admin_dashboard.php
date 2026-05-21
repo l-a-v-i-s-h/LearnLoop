@@ -1,3 +1,13 @@
+<?php
+require_once __DIR__ . '/../config/db.php';
+
+if (!isset($_SESSION['admin']['admin_id'])) {
+    header('Location: login.php');
+    exit;
+}
+
+$adminName = (string) ($_SESSION['admin']['full_name'] ?? 'Admin');
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,7 +17,7 @@
     <link rel="stylesheet" href="../assets/css/admin_dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
-<body class="admin-dashboard-page">
+<body class="admin-dashboard-page admin-home-page">
     <div class="admin-shell">
         <header class="admin-header">
             <a href="#" class="admin-logo" aria-label="LearnLoop home">
@@ -22,66 +32,62 @@
             <div class="admin-profile">
                 <div class="admin-profile-copy">
                     <span class="admin-avatar"><i class="fa-regular fa-user"></i></span>
-                    <span>Admin</span>
+                    <span><?php echo esc($adminName); ?></span>
                 </div>
 
-                <button class="logout-button" type="button" aria-label="Log out">
-                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                </button>
+                <form action="../api/auth.php?action=admin-logout" method="POST" style="margin: 0;">
+                    <?php echo csrf_input(); ?>
+                    <button class="logout-button" type="submit" aria-label="Log out">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </form>
             </div>
         </header>
 
         <div class="admin-layout">
             <aside class="admin-sidebar">
                 <nav class="admin-nav" aria-label="Admin navigation">
-                    <a class="admin-nav-item is-active" href="#">
+                    <a class="admin-nav-item is-active" href="admin_dashboard.php">
                         <i class="fa-solid fa-house"></i>
                         <span>Dashboard</span>
                     </a>
+
                     <a class="admin-nav-item" href="#">
-                        <i class="fa-solid fa-users"></i>
+                        <i class="fa-solid fa-user-graduate"></i>
                         <span>All Students</span>
                     </a>
-                    <a class="admin-nav-item" href="#">
-                        <i class="fa-regular fa-note-sticky"></i>
-                        <span>Shared Notes</span>
-                    </a>
-                    <a class="admin-nav-item" href="#">
+
+                    <a class="admin-nav-item" href="forums.php">
                         <i class="fa-regular fa-comments"></i>
                         <span>Academic Forums</span>
                     </a>
-                    <a class="admin-nav-item" href="#">
-                        <i class="fa-regular fa-flag"></i>
-                        <span>Reports Quests</span>
-                    </a>
-                    <a class="admin-nav-item" href="#">
+
+                    <a class="admin-nav-item" href="chat_monitor.php">
                         <i class="fa-solid fa-headset"></i>
                         <span>Chat Monitor</span>
                     </a>
-                    <a class="admin-nav-item" href="#">
+
+                    <a class="admin-nav-item" href="banned_users.php">
                         <i class="fa-solid fa-ban"></i>
                         <span>Banned Users</span>
                     </a>
+                    
                     <a class="admin-nav-item" href="#">
                         <i class="fa-regular fa-user"></i>
                         <span>Account</span>
                     </a>
                 </nav>
 
-                <nav class="admin-nav admin-nav-secondary" aria-label="Admin utilities">
-                    <a class="admin-nav-item" href="#">
-                        <i class="fa-solid fa-gear"></i>
-                        <span>Settings</span>
-                    </a>
-                    <a class="admin-nav-item" href="#">
-                        <i class="fa-regular fa-clipboard"></i>
-                        <span>Audit Logs</span>
-                    </a>
-                </nav>
+
             </aside>
 
             <main class="admin-main">
-                <h1>Welcome, Admin</h1>
+                <div class="admin-title-row">
+                    <h1>Welcome, Admin</h1>
+                    <a class="admin-floating-bell" href="#" aria-label="Notifications">
+                        <i class="fa-regular fa-bell"></i>
+                    </a>
+                </div>
 
                 <section class="admin-stats" aria-label="Dashboard summary">
                     <article class="admin-stat-card stat-students">
