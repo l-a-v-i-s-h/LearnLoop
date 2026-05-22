@@ -241,13 +241,16 @@ function handle_profile_update_process(): void
         csrf_fail('../pages/profile.php');
     }
 
-    if (!isset($_SESSION['user']['user_id'])) {
+    $isAdmin = isset($_SESSION['admin']['admin_id']);
+    $isUser = isset($_SESSION['user']['user_id']);
+
+    if (!$isAdmin && !$isUser) {
         header('Location: ../pages/login.php');
         exit;
     }
 
-    $userId = $_SESSION['user']['user_id'];
-    $currentEmail = (string) ($_SESSION['user']['email'] ?? '');
+    $accountId = $isAdmin ? $_SESSION['admin']['admin_id'] : $_SESSION['user']['user_id'];
+    $currentEmail = (string) ($isAdmin ? ($_SESSION['admin']['email'] ?? '') : ($_SESSION['user']['email'] ?? ''));
     $fullName = safe_input($_POST['full_name'] ?? '', 100);
     $email = safe_input($_POST['email'] ?? '', 150);
 
@@ -263,11 +266,13 @@ function handle_profile_update_process(): void
         exit;
     }
 
-    $users = db()->selectCollection('users');
+    $collection = db()->selectCollection($isAdmin ? 'admin' : 'users');
+    $idField = $isAdmin ? 'admin_id' : 'user_id';
+    $sessionKey = $isAdmin ? 'admin' : 'user';
 
     try {
-        $result = $users->updateOne(
-            ['user_id' => $userId],
+        $result = $collection->updateOne(
+            [$idField => $accountId],
             ['$set' => ['full_name' => $fullName]]
         );
     } catch (MongoDB\Driver\Exception\Exception $e) {
@@ -282,7 +287,7 @@ function handle_profile_update_process(): void
         exit;
     }
 
-    $_SESSION['user']['full_name'] = $fullName;
+    $_SESSION[$sessionKey]['full_name'] = $fullName;
     $_SESSION['success'] = 'Profile updated successfully.';
 
     header('Location: ../pages/profile.php');
@@ -301,12 +306,15 @@ function handle_pass_change(): void
         csrf_fail('../pages/profile.php');
     }
 
-    if (!isset($_SESSION['user']['user_id'])) {
+    $isAdmin = isset($_SESSION['admin']['admin_id']);
+    $isUser = isset($_SESSION['user']['user_id']);
+
+    if (!$isAdmin && !$isUser) {
         header('Location: ../pages/login.php');
         exit;
     }
 
-    $uid = $_SESSION['user']['user_id'];
+    $uid = $isAdmin ? $_SESSION['admin']['admin_id'] : $_SESSION['user']['user_id'];
     $cur = (string) ($_POST['cur_pass'] ?? '');
     $new = (string) ($_POST['new_pass'] ?? '');
     $conf = (string) ($_POST['conf_pass'] ?? '');
@@ -329,8 +337,9 @@ function handle_pass_change(): void
         exit;
     }
 
-    $users = db()->selectCollection('users');
-    $user = $users->findOne(['user_id' => $uid]);
+    $collection = db()->selectCollection($isAdmin ? 'admin' : 'users');
+    $idField = $isAdmin ? 'admin_id' : 'user_id';
+    $user = $collection->findOne([$idField => $uid]);
 
     if (!$user) {
         $_SESSION['error'] = 'User not found.';
@@ -347,7 +356,7 @@ function handle_pass_change(): void
     $newHash = password_hash($new, PASSWORD_DEFAULT);
 
     try {
-        $res = $users->updateOne(['user_id' => $uid], ['$set' => ['password_hash' => $newHash]]);
+        $res = $collection->updateOne([$idField => $uid], ['$set' => ['password_hash' => $newHash]]);
     } catch (MongoDB\Driver\Exception\Exception $e) {
         $_SESSION['error'] = 'Password update failed. Try again.';
         header('Location: ../pages/profile.php');

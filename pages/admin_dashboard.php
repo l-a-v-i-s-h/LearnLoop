@@ -62,19 +62,18 @@ $adminName = (string) ($_SESSION['admin']['full_name'] ?? 'Admin');
                         <i class="fa-regular fa-comments"></i>
                         <span>Academic Forums</span>
                     </a>
+                
                     <a class="admin-nav-item" href="chat_monitor.php">
-                    <a class="admin-nav-item" href="#">
                         <i class="fa-solid fa-headset"></i>
                         <span>Chat Monitor</span>
                     </a>
 
                     <a class="admin-nav-item" href="banned_users.php">
-                    <a class="admin-nav-item" href="#">
                         <i class="fa-solid fa-ban"></i>
                         <span>Banned Users</span>
                     </a>
                     
-                    <a class="admin-nav-item" href="#">
+                    <a class="admin-nav-item" href="profile.php">
                         <i class="fa-regular fa-user"></i>
                         <span>Account</span>
                     </a>

@@ -125,7 +125,7 @@ $selectedReport = $reports[0];
                         <span>Banned Users</span>
                     </a>
 
-                    <a class="admin-nav-item" href="#">
+                    <a class="admin-nav-item" href="profile.php">
                         <i class="fa-regular fa-user"></i>
                         <span>Account</span>
                     </a>

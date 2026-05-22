@@ -1,5 +1,21 @@
 db = db.getSiblingDB("learnloop");
 
+db.createCollection("admin", {
+	validator: {
+		$jsonSchema: {
+			bsonType: "object",
+			required: ["admin_id", "full_name", "email", "password_hash", "created_at"],
+			properties: {
+				admin_id: { bsonType: "string" },
+				full_name: { bsonType: "string" },
+				email: { bsonType: "string" },
+				password_hash: { bsonType: "string" },
+				created_at: { bsonType: "date" }
+			}
+		}
+	}
+});
+
 db.createCollection("users", {
 	validator: {
 		$jsonSchema: {
@@ -16,6 +32,23 @@ db.createCollection("users", {
 		}
 	}
 });
+
+db.admin.createIndex({ admin_id: 1 }, { unique: true });
+db.admin.createIndex({ email: 1 }, { unique: true });
+
+db.admin.updateOne(
+	{ email: "admin@gmail.com" },
+	{
+		$setOnInsert: {
+			admin_id: "admin-001",
+			full_name: "Admin",
+			email: "admin@gmail.com",
+			password_hash: "$2y$10$XG.AmMAT5mnkP12i9cvoL.j/JKBex4MRA94uKYXLv7wbmi9Vbv6DG",
+			created_at: new Date()
+		}
+	},
+	{ upsert: true }
+);
 
 db.createCollection("study_groups", {
 	validator: {

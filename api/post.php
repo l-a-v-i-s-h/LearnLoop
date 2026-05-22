@@ -49,7 +49,7 @@ if ($requestMethod === 'POST') {
 	if ($apiAction === 'comment') {
 		create_comment($postsCollection, $commentsCollection);
 	} else {
-		create_post($postsCollection);
+		create_post($postsCollection, $usersCollection);
 	}
 	exit;
 }
@@ -94,7 +94,7 @@ if ($requestMethod === 'DELETE') {
 respond_error(405);
 exit;
 
-function create_post(mixed $postsCollection): void
+function create_post(mixed $postsCollection, mixed $usersCollection): void
 {
 	$body = get_request_body();
 
@@ -133,6 +133,8 @@ function create_post(mixed $postsCollection): void
 		return;
 	}
 
+	$authorName = get_post_author_name($usersCollection, $userId);
+
 	trigger_forum_event('post-created', [
 		'post_id' => $postId,
 		'group_id' => $groupId,
@@ -151,6 +153,7 @@ function create_post(mixed $postsCollection): void
 		'post_id' => $postId,
 		'group_id' => $groupId,
 		'user_id' => $userId,
+		'user_name' => $authorName,
 		'title' => $title,
 		'content' => $content,
 		'description' => $content,
@@ -323,7 +326,8 @@ function get_posts(mixed $postsCollection, mixed $commentsCollection, mixed $use
 		}
 
 		$replies = get_post_replies($commentsCollection, $usersCollection, $postId);
-		respond_success(map_post_document($doc, $replies));
+		$authorName = get_post_author_name($usersCollection, (string) ($doc['user_id'] ?? ''));
+		respond_success(map_post_document($doc, $replies, $authorName));
 		return;
 	}
 
@@ -347,7 +351,8 @@ function get_posts(mixed $postsCollection, mixed $commentsCollection, mixed $use
 	foreach ($cursor as $doc) {
 		$currentPostId = $doc['post_id'] ?? '';
 		$replies = get_post_replies($commentsCollection, $usersCollection, $currentPostId);
-		$posts[] = map_post_document($doc, $replies);
+		$authorName = get_post_author_name($usersCollection, (string) ($doc['user_id'] ?? ''));
+		$posts[] = map_post_document($doc, $replies, $authorName);
 	}
 
 	respond_success($posts);
@@ -483,12 +488,13 @@ function delete_post(mixed $postsCollection, mixed $commentsCollection): void
 	respond_success();
 }
 
-function map_post_document(mixed $doc, array $replies): array
+function map_post_document(mixed $doc, array $replies, string $authorName = ''): array
 {
 	return [
 		'post_id' => $doc['post_id'] ?? '',
 		'group_id' => $doc['group_id'] ?? '',
 		'user_id' => $doc['user_id'] ?? '',
+		'user_name' => $authorName,
 		'title' => $doc['title'] ?? '',
 		'content' => $doc['content'] ?? '',
 		'description' => $doc['content'] ?? '',
@@ -521,6 +527,24 @@ function respond_success(mixed $data = null, int $statusCode = 200): void
 	echo json_encode($response);
 }
 
+function get_post_author_name(mixed $usersCollection, string $userId): string
+{
+	if ($userId === '') {
+		return '';
+	}
+
+	try {
+		$user = $usersCollection->findOne(['user_id' => $userId]);
+		if (!$user) {
+			return '';
+		}
+
+		return trim((string) ($user['full_name'] ?? $user['username'] ?? ''));
+	} catch (Exception $e) {
+		return '';
+	}
+}
+
 function get_post_replies(mixed $commentsCollection, mixed $usersCollection, string $postId): array
 {
 	if ($postId === '') {
@@ -539,15 +563,7 @@ function get_post_replies(mixed $commentsCollection, mixed $usersCollection, str
 	$replies = [];
 	foreach ($cursor as $comment) {
 		$text = $comment['content'] ?? '';
-		$replyUserName = '';
-		try {
-			$replyUser = $usersCollection->findOne(['user_id' => $comment['user_id'] ?? '']);
-			if ($replyUser) {
-				$replyUserName = trim((string) ($replyUser['full_name'] ?? $replyUser['username'] ?? ''));
-			}
-		} catch (Exception $e) {
-			$replyUserName = '';
-		}
+		$replyUserName = get_post_author_name($usersCollection, (string) ($comment['user_id'] ?? ''));
 
 		$replies[] = [
 			'comment_id' => $comment['comment_id'] ?? '',
@@ -587,7 +603,8 @@ function get_recent_posts(mixed $postsCollection, mixed $commentsCollection, mix
 	foreach ($cursor as $doc) {
 		$currentPostId = $doc['post_id'] ?? '';
 		$replies = get_post_replies($commentsCollection, $usersCollection, $currentPostId);
-		$posts[] = map_post_document($doc, $replies);
+		$authorName = get_post_author_name($usersCollection, (string) ($doc['user_id'] ?? ''));
+		$posts[] = map_post_document($doc, $replies, $authorName);
 	}
 
 	respond_success($posts);
