@@ -76,7 +76,7 @@ $bannedUsers = [
                         <span>Academic Forums</span>
                     </a>
 
-                    <a class="admin-nav-item" href="#">
+                    <a class="admin-nav-item" href="chat_monitor.php">
                         <i class="fa-solid fa-headset"></i>
                         <span>Chat Monitor</span>
                     </a>
@@ -86,7 +86,7 @@ $bannedUsers = [
                         <span>Banned Users</span>
                     </a>
 
-                    <a class="admin-nav-item" href="#">
+                    <a class="admin-nav-item" href="profile.php">
                         <i class="fa-regular fa-user"></i>
                         <span>Account</span>
                     </a>

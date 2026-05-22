@@ -175,13 +175,13 @@ function send_password_reset_email(string $email, string $fullname): bool
         $mail->isSMTP();
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = 'bimalkandel468@gmail.com';
-        $mail->Password   = 'aubh sawb jqwi anqm';
+        $mail->Username   = 'toastus3rr1@gmail.com';
+        $mail->Password   = 'oeve mekd ycld qjat';
         $mail->SMTPSecure = 'tls';
         $mail->Port       = 587;
         $mail->CharSet    = 'UTF-8';
 
-        $mail->setFrom('bimalkandel468@gmail.com', 'LearnLoop');
+        $mail->setFrom('toastus3rr1@gmail.com', 'LearnLoop');
         $mail->addAddress($email, $fullname);
         $mail->Subject = $subject;
         $mail->isHTML(true);
