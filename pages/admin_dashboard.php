@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/db.php';
 
 if (!isset($_SESSION['admin']['admin_id'])) {
     header('Location: login.php');
+    header('Location: admin_login.php');
     exit;
 }
 
@@ -61,13 +62,14 @@ $adminName = (string) ($_SESSION['admin']['full_name'] ?? 'Admin');
                         <i class="fa-regular fa-comments"></i>
                         <span>Academic Forums</span>
                     </a>
-
                     <a class="admin-nav-item" href="chat_monitor.php">
+                    <a class="admin-nav-item" href="#">
                         <i class="fa-solid fa-headset"></i>
                         <span>Chat Monitor</span>
                     </a>
 
                     <a class="admin-nav-item" href="banned_users.php">
+                    <a class="admin-nav-item" href="#">
                         <i class="fa-solid fa-ban"></i>
                         <span>Banned Users</span>
                     </a>
