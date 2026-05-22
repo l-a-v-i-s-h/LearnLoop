@@ -148,6 +148,7 @@ $membersJson = json_encode($members);
         </main>
     </div>
 
+    <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
     <script src="../assets/js/chat.js?v=<?php echo $v; ?>"></script>
 </body>
 </html>
