@@ -10,9 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentUserId = chatBox ? (chatBox.dataset.userId || '') : '';
     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
     const csrfToken = csrfMeta ? (csrfMeta.getAttribute('content') || '') : '';
+    const PUSHER_KEY = '14db4509a104fa2c4d52';
+    const PUSHER_CLUSTER = 'ap2';
     let activeInlineEdit = null;
     let skipOutsideCloseOnce = false;
     let pendingFiles = [];
+    let messages = [];
+    let realtimeEnabled = false;
     const MAX_UPLOAD_COUNT = 5;
     const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 MB
     const ALLOWED_EXT = ['pdf','doc','docx','ppt','pptx','txt','png','jpg','jpeg','zip'];
@@ -118,10 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const contentHtml = '<div class="message-content">'
-            + '<div class="msg-meta' + (isSent ? ' sent' : '') + '">'
-            + (!isSent ? '<span class="msg-sender">' + esc(sender) + '</span>' : '')
-            + (timeText ? '<span class="msg-time">' + esc(timeText) + '</span>' : '')
-            + '</div>'
             + '<div class="bubble-wrap"><p class="bubble">' + bubbleHtml + '</p>' + actionsHtml + '</div>'
             + '</div>';
 
@@ -146,6 +146,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
         messagesEl.innerHTML = items.map(renderMessage).join('');
         messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setMessages(items) {
+        messages = Array.isArray(items) ? items : [];
+        renderMessages(messages);
+    }
+
+    function sortMessages() {
+        messages.sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
+    }
+
+    function upsertMessage(item) {
+        if (!item || !item.message_id) {
+            return;
+        }
+
+        const existingIndex = messages.findIndex(m => m.message_id === item.message_id);
+        if (existingIndex >= 0) {
+            messages[existingIndex] = { ...messages[existingIndex], ...item };
+        } else {
+            messages.push(item);
+        }
+
+        sortMessages();
+        renderMessages(messages);
+    }
+
+    function removeMessage(messageId) {
+        if (!messageId) {
+            return;
+        }
+
+        messages = messages.filter(m => m.message_id !== messageId);
+        renderMessages(messages);
     }
 
     function closeAllMenus() {
@@ -262,7 +296,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            await loadMessages();
+            if (!realtimeEnabled) {
+                await loadMessages();
+            }
         };
 
         saveBtn.addEventListener('click', submitInlineEdit);
@@ -362,13 +398,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            await loadMessages();
+            if (!realtimeEnabled) {
+                await loadMessages();
+            }
         });
     }
 
     async function unsendMessage(messageId) {
         // kept for compatibility; unsend now uses inline confirm
-        if (messageId) {
+        if (messageId && !realtimeEnabled) {
             await loadMessages();
         }
     }
@@ -381,10 +419,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await fetch('../api/chat.php?group=' + encodeURIComponent(groupName));
         const data = await response.json();
         if (!data.success) {
-            renderMessages([]);
+            setMessages([]);
             return;
         }
-        renderMessages(data.data || []);
+        setMessages(data.data || []);
     }
 
     async function sendCurrentMessage() {
@@ -425,7 +463,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         msgInput.value = '';
-        await loadMessages();
+        if (!realtimeEnabled) {
+            await loadMessages();
+        }
     }
 
     async function sendFileMessage(files) {
@@ -465,7 +505,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         resetPendingFile();
-        await loadMessages();
+        if (!realtimeEnabled) {
+            await loadMessages();
+        }
     }
 
     if (sendBtn) {
@@ -590,8 +632,75 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function initChatRealtime() {
+        if (!window.Pusher || !PUSHER_KEY) {
+            return;
+        }
+
+        const pusher = new window.Pusher(PUSHER_KEY, {
+            cluster: PUSHER_CLUSTER
+        });
+
+        const channel = pusher.subscribe('chat-channel');
+        realtimeEnabled = true;
+
+        const mapPayload = (data) => ({
+            message_id: String(data.message_id || ''),
+            group: String(data.group || ''),
+            user_id: String(data.user_id || ''),
+            sender_name: String(data.sender_name || ''),
+            type: String(data.type || 'text'),
+            message: String(data.message || ''),
+            note_id: String(data.note_id || ''),
+            note_title: String(data.note_title || ''),
+            note_group_id: String(data.note_group_id || ''),
+            note_group_name: String(data.note_group_name || ''),
+            note_visibility: String(data.note_visibility || ''),
+            file_name: String(data.file_name || ''),
+            file_path: String(data.file_path || ''),
+            file_size: Number(data.file_size || 0),
+            edited: Boolean(data.edited),
+            created_at: String(data.created_at || '')
+        });
+
+        channel.bind('message-created', (data) => {
+            if (!data || String(data.group || '') !== groupName) {
+                return;
+            }
+
+            const message = mapPayload(data);
+            if (!message.message_id) {
+                return;
+            }
+
+            upsertMessage(message);
+        });
+
+        channel.bind('message-updated', (data) => {
+            if (!data || String(data.group || '') !== groupName) {
+                return;
+            }
+
+            const message = mapPayload(data);
+            if (!message.message_id) {
+                return;
+            }
+
+            upsertMessage(message);
+        });
+
+        channel.bind('message-deleted', (data) => {
+            if (!data || String(data.group || '') !== groupName) {
+                return;
+            }
+
+            const messageId = String(data.message_id || '');
+            removeMessage(messageId);
+        });
+    }
+
+    initChatRealtime();
     loadMessages();
-    setInterval(loadMessages, 10000);
 
     // Load and display group members
     function loadGroupMembers() {

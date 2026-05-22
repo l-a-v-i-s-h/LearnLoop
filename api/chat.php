@@ -14,6 +14,7 @@ if (!isset($_SESSION['user'])) {
 }
 
 $chatCollection = db()->selectCollection('chat_messages');
+$pusher = build_pusher();
 $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if (in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
@@ -227,6 +228,20 @@ function post_message(mixed $chatCollection): void
 					'file_size' => (int) ($sf['file_size'] ?? 0),
 					'created_at' => format_mongo_date($now)
 				];
+
+				trigger_chat_event('message-created', [
+					'message_id' => $messageId,
+					'group' => $group,
+					'user_id' => $userId,
+					'sender_name' => $senderName,
+					'type' => 'file',
+					'message' => '',
+					'file_name' => $sf['file_name'],
+					'file_path' => $sf['file_path'],
+					'file_size' => (int) ($sf['file_size'] ?? 0),
+					'edited' => false,
+					'created_at' => format_mongo_date($now)
+				]);
 			} catch (Exception $e) {
 				// if insert fails, try to unlink file to avoid orphaning
 				$path = __DIR__ . '/../' . ltrim($sf['file_path'], '/\\');
@@ -278,6 +293,20 @@ function post_message(mixed $chatCollection): void
 			'file_size' => $fileSize,
 			'edited' => false,
 			'created_at' => $now
+		]);
+
+		trigger_chat_event('message-created', [
+			'message_id' => $messageId,
+			'group' => $group,
+			'user_id' => $userId,
+			'sender_name' => $senderName,
+			'type' => $type,
+			'message' => $messageText,
+			'file_name' => $fileName,
+			'file_path' => $filePath,
+			'file_size' => $fileSize,
+			'edited' => false,
+			'created_at' => format_mongo_date($now)
 		]);
 	} catch (Exception $e) {
 		http_response_code(500);
@@ -355,6 +384,31 @@ function edit_message(mixed $chatCollection): void
 		return;
 	}
 
+	try {
+		$updated = $chatCollection->findOne([
+			'message_id' => $messageId,
+			'user_id' => $userId
+		]);
+	} catch (Exception $e) {
+		$updated = null;
+	}
+
+	if ($updated) {
+		trigger_chat_event('message-updated', [
+			'message_id' => $updated['message_id'] ?? $messageId,
+			'group' => $updated['group'] ?? '',
+			'user_id' => $updated['user_id'] ?? $userId,
+			'sender_name' => $updated['sender_name'] ?? '',
+			'type' => $updated['type'] ?? 'text',
+			'message' => $updated['message'] ?? $messageText,
+			'file_name' => $updated['file_name'] ?? '',
+			'file_path' => $updated['file_path'] ?? '',
+			'file_size' => (int) ($updated['file_size'] ?? 0),
+			'edited' => (bool) ($updated['edited'] ?? true),
+			'created_at' => format_mongo_date($updated['created_at'] ?? null)
+		]);
+	}
+
 	echo json_encode([
 		'success' => true,
 		'message' => 'Message updated.'
@@ -429,6 +483,11 @@ function delete_message(mixed $chatCollection): void
 		return;
 	}
 
+	trigger_chat_event('message-deleted', [
+		'message_id' => $message['message_id'] ?? $messageId,
+		'group' => $message['group'] ?? ''
+	]);
+
 	echo json_encode([
 		'success' => true,
 		'message' => 'Message deleted.'
@@ -458,6 +517,40 @@ function is_allowed_chat_upload(string $fileName): bool
 {
 	$extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 	return in_array($extension, ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'png', 'jpg', 'jpeg', 'zip'], true);
+}
+
+function build_pusher(): ?Pusher\Pusher
+{
+	try {
+		$options = [
+			'cluster' => 'ap2',
+			'useTLS' => true
+		];
+
+		return new Pusher\Pusher(
+			'14db4509a104fa2c4d52',
+			'22eeaeff5739ab77e4cc',
+			'2150170',
+			$options
+		);
+	} catch (Exception $e) {
+		return null;
+	}
+}
+
+function trigger_chat_event(string $eventName, array $payload): void
+{
+	global $pusher;
+
+	if (!$pusher) {
+		return;
+	}
+
+	try {
+		$pusher->trigger('chat-channel', $eventName, $payload);
+	} catch (Exception $e) {
+		// Ignore pusher failures so the API still works.
+	}
 }
 
 
