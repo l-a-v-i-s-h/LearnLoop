@@ -139,6 +139,14 @@ document.addEventListener('DOMContentLoaded', () => {
         notificationList.innerHTML = notifications.map(notification => {
             const isPending = notification.status === 'pending';
             const isGroupInvite = notification.type === 'group_invite';
+            const titleMap = {
+                group_invite: `${esc(notification.sender_name)} invited you`,
+                report_rejected: 'Your report was rejected',
+                user_warned: 'Your account was warned',
+                user_suspended: 'Your account was suspended',
+                user_deleted: 'Your account was removed'
+            };
+            const titleText = titleMap[notification.type] || `${esc(notification.sender_name)} sent you a notification`;
 
             let actionButtons = '';
             let deleteButton = '';
@@ -176,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="notification-item ${isPending ? 'unread' : ''}" data-notification-id="${esc(notification.notification_id)}">
                     <div class="notification-item-header">
                         <div class="notification-item-title-wrap">
-                            <h4 class="notification-item-title">${esc(notification.sender_name)} invited you</h4>
+                            <h4 class="notification-item-title">${titleText}</h4>
                             <span class="notification-item-time">${formatTime(notification.created_at)}</span>
                         </div>
                         ${deleteButton}

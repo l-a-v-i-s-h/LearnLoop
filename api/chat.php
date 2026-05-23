@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/upload.php';
+require_once __DIR__ . '/../includes/moderation.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 
@@ -113,6 +114,16 @@ function post_message(mixed $chatCollection): void
 {
 	$user = $_SESSION['user'];
 	$userId = $user['user_id'] ?? '';
+	$moderationCheck = moderation_can_send_message((string) $userId);
+	if (!$moderationCheck[0]) {
+		http_response_code(403);
+		echo json_encode([
+			'success' => false,
+			'message' => $moderationCheck[1]
+		]);
+		return;
+	}
+
 	$senderName = clean_text($user['full_name'] ?? 'User');
 
 	$group = clean_text($_POST['group'] ?? '');
@@ -342,6 +353,15 @@ function edit_message(mixed $chatCollection): void
 	$messageId = clean_text($body['message_id'] ?? '');
 	$messageText = clean_text($body['message'] ?? '');
 	$userId = $_SESSION['user']['user_id'] ?? '';
+	$moderationCheck = moderation_can_send_message((string) $userId);
+	if (!$moderationCheck[0]) {
+		http_response_code(403);
+		echo json_encode([
+			'success' => false,
+			'message' => $moderationCheck[1]
+		]);
+		return;
+	}
 
 	if ($messageId === '' || $messageText === '') {
 		http_response_code(422);
@@ -420,6 +440,15 @@ function delete_message(mixed $chatCollection): void
 	$body = read_json_body();
 	$messageId = clean_text($body['message_id'] ?? '');
 	$userId = $_SESSION['user']['user_id'] ?? '';
+	$moderationCheck = moderation_can_send_message((string) $userId);
+	if (!$moderationCheck[0]) {
+		http_response_code(403);
+		echo json_encode([
+			'success' => false,
+			'message' => $moderationCheck[1]
+		]);
+		return;
+	}
 
 	if ($messageId === '') {
 		http_response_code(422);

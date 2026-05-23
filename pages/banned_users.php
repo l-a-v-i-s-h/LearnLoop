@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/moderation.php';
 
 if (!isset($_SESSION['admin']['admin_id'])) {
     header('Location: login.php');
@@ -7,31 +8,29 @@ if (!isset($_SESSION['admin']['admin_id'])) {
 }
 
 $adminName = (string) ($_SESSION['admin']['full_name'] ?? 'Admin');
-
+$bannedSnapshot = moderation_get_dashboard_snapshot();
 $summaryCards = [
-    ['label' => 'Total Banned', 'value' => '7', 'icon' => 'fa-solid fa-user-group', 'class' => 'banned-total'],
-    ['label' => 'Active', 'value' => '5', 'icon' => 'fa-solid fa-check', 'class' => 'banned-active'],
-    ['label' => 'Warned', 'value' => '2', 'icon' => 'fa-solid fa-triangle-exclamation', 'class' => 'banned-warned'],
-    ['label' => 'Banned', 'value' => '7', 'icon' => 'fa-solid fa-ban', 'class' => 'banned-blocked'],
+    ['label' => 'Total Moderated', 'value' => (string) (($bannedSnapshot['summary']['users_warned'] ?? 0) + ($bannedSnapshot['summary']['users_suspended'] ?? 0) + ($bannedSnapshot['summary']['users_banned'] ?? 0)), 'icon' => 'fa-solid fa-user-group', 'class' => 'banned-total'],
+    ['label' => 'Active', 'value' => (string) ($bannedSnapshot['summary']['users_active'] ?? 0), 'icon' => 'fa-solid fa-check', 'class' => 'banned-active'],
+    ['label' => 'Warned', 'value' => (string) ($bannedSnapshot['summary']['users_warned'] ?? 0), 'icon' => 'fa-solid fa-triangle-exclamation', 'class' => 'banned-warned'],
+    ['label' => 'Suspended', 'value' => (string) ($bannedSnapshot['summary']['users_suspended'] ?? 0), 'icon' => 'fa-solid fa-user-lock', 'class' => 'banned-warned'],
+    ['label' => 'Banned', 'value' => (string) ($bannedSnapshot['summary']['users_banned'] ?? 0), 'icon' => 'fa-solid fa-ban', 'class' => 'banned-blocked'],
 ];
 
-$bannedUsers = [
-    ['initials' => 'AZ', 'name' => 'ALICE ZHANG CS', 'group' => 'Group1', 'course' => 'BCS', 'date' => 'March 9, 2025'],
-    ['initials' => 'BC', 'name' => 'BRUCE CHOI', 'group' => 'Group2', 'course' => 'BIBM', 'date' => 'March 15, 2025'],
-    ['initials' => 'BC', 'name' => 'BOB LEE CY', 'group' => 'Group3', 'course' => 'BCY', 'date' => 'March 16, 2025'],
-    ['initials' => 'SL', 'name' => 'SARA LEE', 'group' => 'Group4', 'course' => 'BCY', 'date' => 'March 25, 2025'],
-];
+$bannedUsers = moderation_get_banned_users();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo esc(csrf_token()); ?>">
     <title>LearnLoop | Banned Users</title>
     <link rel="stylesheet" href="../assets/css/admin_dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body class="admin-dashboard-page banned-users-page">
+    <!-- user moderation modal will be appended here via server-rendered block at end of body -->
     <div class="admin-shell">
         <header class="admin-header">
             <a href="admin_dashboard.php" class="admin-logo" aria-label="LearnLoop home">
@@ -122,30 +121,75 @@ $bannedUsers = [
                             <button class="filter-btn" type="button">Active</button>
                             <button class="filter-btn" type="button">Warned</button>
                             <button class="filter-btn" type="button">Banned</button>
-                            <button class="add-student-btn" type="button"><i class="fa-solid fa-plus"></i>Add Students</button>
                         </div>
                     </div>
 
                     <div class="banned-user-list">
-                        <?php foreach ($bannedUsers as $user): ?>
+                        <?php if (empty($bannedUsers)): ?>
                             <article class="banned-user-row">
-                                <span class="banned-user-avatar"><?php echo esc($user['initials']); ?></span>
+                                <span class="banned-user-avatar">--</span>
                                 <div class="banned-user-copy">
-                                    <strong><?php echo esc($user['name']); ?></strong>
-                                    <span><?php echo esc($user['group']); ?></span>
+                                    <strong>No warned, suspended, or banned users yet</strong>
+                                    <span>New moderation actions will appear here in real time.</span>
                                 </div>
-                                <span class="banned-user-course"><?php echo esc($user['course']); ?></span>
-                                <span class="banned-user-date">Banned: <?php echo esc($user['date']); ?></span>
+                                <span class="banned-user-course">All clear</span>
+                                <span class="banned-user-date">No moderation history</span>
                                 <div class="banned-row-actions">
-                                    <button class="row-action view" type="button">View</button>
-                                    <button class="row-action ban" type="button">Ban</button>
-                                    <button class="row-action unban" type="button">Unban</button>
+                                    <button class="row-action view" type="button" disabled>View</button>
+                                    <button class="row-action ban" type="button" disabled>Ban</button>
+                                    <button class="row-action unban" type="button" disabled>Unban</button>
                                 </div>
                             </article>
-                        <?php endforeach; ?>
+                        <?php else: ?>
+                            <?php foreach ($bannedUsers as $user): ?>
+                            <article class="banned-user-row" data-user-id="<?php echo esc($user['user_id']); ?>" data-user-status="<?php echo esc($user['moderation_status']); ?>">
+                                <span class="banned-user-avatar"><?php echo esc($user['initials']); ?></span>
+                                <div class="banned-user-copy">
+                                    <strong><?php echo esc($user['full_name']); ?></strong>
+                                    <span><?php echo esc($user['username'] ?: $user['email']); ?></span>
+                                </div>
+                                <span class="banned-user-course"><?php echo esc(ucfirst($user['moderation_status'])); ?></span>
+                                <span class="banned-user-date"><?php echo esc($user['updated_at'] ? 'Updated: ' . $user['updated_at'] : 'Recently updated'); ?></span>
+                                <div class="banned-row-actions">
+                                    <a class="row-action view" href="chat_monitor.php?reported_user_id=<?php echo esc($user['user_id']); ?>">View</a>
+                                    <button class="row-action ban" type="button" data-user-moderate="ban" data-user-id="<?php echo esc($user['user_id']); ?>">Ban</button>
+                                    <button class="row-action unban" type="button" data-user-moderate="unban" data-user-id="<?php echo esc($user['user_id']); ?>">Unban</button>
+                                </div>
+                            </article>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </section>
             </main>
+        </div>
+    </div>
+    <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
+    <script src="../assets/js/moderation.js"></script>
+    <script src="../assets/js/banned_users.js"></script>
+    <div class="report-modal-overlay" id="userModerationModal" hidden data-action="">
+        <div class="report-modal-card" role="dialog" aria-modal="true" aria-labelledby="userModerationTitle">
+            <div class="report-modal-header">
+                <div>
+                    <p class="report-modal-kicker" id="userModerationKicker">Confirm action</p>
+                    <h2 id="userModerationTitle">User moderation</h2>
+                </div>
+                <button type="button" class="report-modal-close" id="userModerationClose" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="report-modal-form">
+                <p id="userModerationMessage">Confirm the admin action for this user.</p>
+                <p class="report-modal-target"><strong>User ID:</strong> <span id="userModerationUserId" style="word-break:break-all;"></span></p>
+
+                <label class="report-field" id="userModerationReasonWrap">
+                    <span id="userModerationReasonLabel">Reason</span>
+                    <textarea id="userModerationReason" rows="4" placeholder="Type the reason here..."></textarea>
+                </label>
+
+                <div class="report-modal-actions">
+                    <button type="button" class="report-modal-cancel" id="userModerationCancel">Cancel</button>
+                    <button type="button" class="report-modal-submit" id="userModerationConfirm">Confirm</button>
+                </div>
+            </div>
         </div>
     </div>
 </body>

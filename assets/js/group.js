@@ -8,12 +8,17 @@ const deleteModal = document.getElementById("deleteModal");
 const deleteGroupName = document.getElementById("deleteGroupName");
 const cancelDeleteBtn = document.getElementById("cancelDelete");
 const confirmDeleteBtn = document.getElementById("confirmDelete");
+const leaveModal = document.getElementById("leaveModal");
+const leaveGroupName = document.getElementById("leaveGroupName");
+const cancelLeaveBtn = document.getElementById("cancelLeave");
+const confirmLeaveBtn = document.getElementById("confirmLeave");
 const apiUrl = "../api/group.php";
 const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
 const csrfToken = csrfTokenMeta ? (csrfTokenMeta.getAttribute("content") || "") : "";
 
 let groups = [];
 let pendingDeleteId = "";
+let pendingLeaveId = "";
 
 function toggleForm() {
   if (form.style.display === "none" || form.style.display === "") {
@@ -87,9 +92,16 @@ function renderGroups() {
         <button class="action-open-room" onclick="event.stopPropagation();openGroup('${esc(g.group_name)}')">
           Open Room <i class="fa-solid fa-arrow-right"></i>
         </button>
+        ${g.role === 'owner' ? `
         <button class="action-delete" title="Delete" onclick="event.stopPropagation();askDeleteGroup('${esc(g.group_id)}','${esc(g.group_name)}')">
           <i class="fa-solid fa-trash"></i>
         </button>
+        ` : `
+        <!-- member leave button (running exit icon) -->
+        <button class="action-leave" title="Leave group" onclick="event.stopPropagation();askLeaveGroup('${esc(g.group_id)}','${esc(g.group_name)}')">
+          <i class="fa-solid fa-person-running"></i>
+        </button>
+        `}
       </div>
     </div>
   `).join("");
@@ -125,6 +137,36 @@ function askDeleteGroup(groupId, groupName) {
   deleteModal.classList.add("active");
 }
 
+// Ask to leave (opens modal)
+function askLeaveGroup(groupId, groupName) {
+  pendingLeaveId = groupId;
+  if (leaveGroupName) leaveGroupName.textContent = groupName;
+  if (leaveModal) leaveModal.classList.add("active");
+}
+
+function closeLeaveModal() {
+  pendingLeaveId = "";
+  if (leaveGroupName) leaveGroupName.textContent = "";
+  if (leaveModal) leaveModal.classList.remove("active");
+}
+
+async function leaveGroup(groupId) {
+  const res = await fetch(apiUrl, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrfToken
+    },
+    body: JSON.stringify({ group_id: groupId, action: 'leave' })
+  });
+  const data = await res.json();
+  if (!data.success) {
+    alert(data.message || "Failed to leave group");
+    return;
+  }
+  await loadGroups();
+}
+
 function closeDeleteModal() {
   pendingDeleteId = "";
   deleteGroupName.textContent = "";
@@ -147,6 +189,7 @@ function openGroup(name) {
 window.toggleForm = toggleForm;
 window.createGroup = createGroup;
 window.askDeleteGroup = askDeleteGroup;
+window.askLeaveGroup = askLeaveGroup;
 
 cancelDeleteBtn.addEventListener("click", closeDeleteModal);
 
@@ -163,6 +206,22 @@ confirmDeleteBtn.addEventListener("click", async () => {
 
   await deleteGroup(pendingDeleteId);
   closeDeleteModal();
+});
+
+// Leave modal event wiring
+if (cancelLeaveBtn) cancelLeaveBtn.addEventListener("click", closeLeaveModal);
+if (leaveModal) {
+  leaveModal.addEventListener("click", (e) => {
+    if (e.target === leaveModal) {
+      closeLeaveModal();
+    }
+  });
+}
+
+if (confirmLeaveBtn) confirmLeaveBtn.addEventListener("click", async () => {
+  if (!pendingLeaveId) return;
+  await leaveGroup(pendingLeaveId);
+  closeLeaveModal();
 });
 
 loadGroups();
