@@ -89,6 +89,8 @@ function admin_logout(): void
     unset($_SESSION['admin']);
     session_regenerate_id(true);
 
+    remember_forget_cookie_token();
+
     header('Location: ../pages/login.php');
     exit;
 }
@@ -107,6 +109,7 @@ function handle_login_process(): void
 
     $email = clean_email($_POST['email'] ?? '');
     $password = (string) ($_POST['password'] ?? '');
+    $rememberMe = !empty($_POST['remember']);
 
     if ($email === '' || $password === '') {
         $_SESSION['error'] = 'Please enter email and password.';
@@ -126,6 +129,12 @@ function handle_login_process(): void
             'full_name' => (string) ($admin['full_name'] ?? 'Admin'),
             'email' => (string) ($admin['email'] ?? $email),
         ];
+
+        if ($rememberMe) {
+            remember_issue_token('admin', (string) ($admin['admin_id'] ?? 'admin-001'));
+        } else {
+            remember_forget_cookie_token();
+        }
 
         header('Location: ../pages/admin_dashboard.php');
         exit;
@@ -147,6 +156,12 @@ function handle_login_process(): void
         'email' => $user['email'],
     ];
 
+    if ($rememberMe) {
+        remember_issue_token('user', (string) $user['user_id']);
+    } else {
+        remember_forget_cookie_token();
+    }
+
     header('Location: ../pages/dashboard.php');
     exit;
 }
@@ -166,9 +181,16 @@ function handle_register_process(): void
     $fullname = safe_input($_POST['fullname'] ?? '', 100);
     $email = clean_email($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
 
-    if ($fullname === '' || $email === '' || $password === '') {
+    if ($fullname === '' || $email === '' || $password === '' || $confirmPassword === '') {
         $_SESSION['error'] = 'Please fill in all fields.';
+        header('Location: ../pages/register.php');
+        exit;
+    }
+
+    if ($password !== $confirmPassword) {
+        $_SESSION['error'] = 'Passwords do not match.';
         header('Location: ../pages/register.php');
         exit;
     }
