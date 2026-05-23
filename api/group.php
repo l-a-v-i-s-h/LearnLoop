@@ -87,10 +87,21 @@ if ($method === 'GET') {
 			// Count groups owned by user
 			$ownedCount = $groups->countDocuments(['user_id' => $userId]);
 			
-			// Count groups where user is a member
+			// Count groups where user is a member (only if the group still exists)
+			$memberGroupIds = [];
 			$membershipRecords = $groupMembers->find(['user_id' => $userId, 'role' => 'member']);
-			$memberCount = iterator_count($membershipRecords);
-			
+			foreach ($membershipRecords as $member) {
+				if (!empty($member['group_id'])) {
+					$memberGroupIds[] = (string) $member['group_id'];
+				}
+			}
+
+			$memberCount = 0;
+			if (!empty($memberGroupIds)) {
+				$memberGroupIds = array_values(array_unique($memberGroupIds));
+				$memberCount = $groups->countDocuments(['group_id' => ['$in' => $memberGroupIds]]);
+			}
+
 			$totalCount = $ownedCount + $memberCount;
 			
 			respond(200, true, 'Group count fetched successfully.', [
@@ -168,6 +179,26 @@ if ($method === 'DELETE') {
 		exit;
 	}
 
+	// If action=leave, remove the membership record for this user (member leaving group)
+	if (isset($body['action']) && $body['action'] === 'leave') {
+		try {
+			$groupMembers = db()->selectCollection('group_members');
+			$result = $groupMembers->deleteOne(['group_id' => $groupId, 'user_id' => $userId, 'role' => 'member']);
+		} catch (Exception $e) {
+			respond(500, false, 'Failed to leave group.');
+			exit;
+		}
+
+		if ($result->getDeletedCount() === 0) {
+			respond(404, false, 'Membership not found or you are not a member of this group.');
+			exit;
+		}
+
+		respond(200, true, 'Left group successfully.');
+		exit;
+	}
+
+	// Default: delete the group (owner only)
 	try {
 		$result = $groups->deleteOne(['group_id' => $groupId, 'user_id' => $userId]);
 	} catch (Exception $e) {

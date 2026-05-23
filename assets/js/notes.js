@@ -485,5 +485,27 @@
       notes = notes.filter(n => n.id !== deleteId);
       render();
     });
+    const moderationChannel = pusher.subscribe('moderation-channel');
+    moderationChannel.bind('force-logout', (data) => {
+      try {
+        if (!data || String(data.user_id || '') !== currentUserId) return;
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const action = 'logout.php';
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = action;
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = '_csrf_token';
+        input.value = csrf;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+      } catch (err) {
+        console.error('force-logout handler failed', err);
+        window.location.href = '/';
+      }
+    });
   }
 })();

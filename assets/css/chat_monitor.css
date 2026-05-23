@@ -3,6 +3,104 @@
     padding: 24px clamp(24px, 3vw, 42px) 30px;
 }
 
+/* Modal styles reused from chat UI */
+.report-modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(7, 24, 42, 0.52);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+}
+
+.report-modal-overlay[hidden] {
+    display: none !important;
+}
+
+.report-modal-card {
+    width: min(560px, 100%);
+    border-radius: 18px;
+    background: #f8fbff;
+    border: 1px solid #cfe2f5;
+    box-shadow: 0 26px 60px rgba(10, 38, 64, 0.28);
+    padding: 22px;
+    pointer-events: auto;
+    z-index: 2100;
+}
+
+.report-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.report-modal-kicker {
+    margin: 0 0 6px;
+    color: #5d84aa;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.report-modal-header h2 {
+    margin: 0;
+    color: #173e62;
+    font-size: 24px;
+}
+
+.report-modal-close {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 50%;
+    background: #e7f1fb;
+    color: #173e62;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.report-modal-form { display: grid; gap: 12px; }
+
+.report-field {
+    display: grid;
+    gap: 8px;
+    color: #173e62;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.report-field textarea {
+    width: 100%;
+    border: 1px solid #c9dcec;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #173e62;
+    font: inherit;
+    padding: 12px 14px;
+    outline: none;
+    resize: vertical;
+    min-height: 110px;
+}
+
+.report-modal-target {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #eaf5ff;
+    color: #173e62;
+}
+
+.report-modal-actions { display:flex; justify-content:flex-end; gap:10px; }
+.report-modal-cancel { background:#dbe8f4; color:#244867; border:0; padding:8px 16px; border-radius:999px; cursor:pointer; }
+.report-modal-submit { background:#2b79c2; color:#fff; border:0; padding:8px 16px; border-radius:999px; cursor:pointer; }
+
 .chat-monitor-title-row {
     display: flex;
     align-items: center;
@@ -171,8 +269,14 @@
 }
 
 .chat-report-card {
+    display: block;
     min-height: 132px;
     padding: 14px 16px;
+}
+
+.chat-report-card:hover {
+    border-color: #2f9ce8;
+    box-shadow: 0 0 0 2px rgba(47, 156, 232, 0.12), 0 2px 7px rgba(22, 72, 112, 0.14);
 }
 
 .chat-report-card.is-selected {
@@ -401,6 +505,32 @@
     background: #182237;
 }
 
+.chat-screenshot-image {
+    padding: 0;
+    overflow: hidden;
+}
+
+.chat-screenshot-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-height: 240px;
+    object-fit: cover;
+}
+
+.chat-screenshot-default {
+    padding: 18px;
+    background: #ffffff;
+}
+
+.chat-screenshot-default img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 220px;
+    object-fit: contain;
+}
+
 .message-line {
     height: 12px;
     border-radius: 999px;
@@ -440,20 +570,41 @@
     font-size: 11px;
 }
 
-.chat-save-note {
-    float: right;
-    min-height: 24px;
-    margin-top: 7px;
-    padding: 0 12px;
+.chat-admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+/* New action button styles for moderation actions */
+.report-action {
+    min-height: 34px;
+    padding: 8px 14px;
     border: 0;
-    border-radius: 7px;
-    background: #429bff;
-    color: var(--admin-white);
+    border-radius: 10px;
     cursor: pointer;
     font: inherit;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 700;
+    color: #fff;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
+
+.report-action:active { transform: translateY(1px); }
+
+.report-action--danger { background: #c53030; }
+.report-action--warn { background: #3b82f6; }
+.report-action--suspend { background: #f59e0b; }
+.report-action--ban { background: #ef4444; }
+
+.report-action:hover { box-shadow: 0 6px 18px rgba(20, 60, 100, 0.12); }
+
+/* Icon spacing inside report action buttons */
+.report-action i { margin-right: 8px; font-size: 14px; vertical-align: middle; }
+
+/* Slightly darker hover for destructive action */
+.report-action--danger:hover { background: #9b2c2c; }
 
 @media (max-width: 1180px) {
     .chat-summary,

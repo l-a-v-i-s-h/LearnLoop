@@ -18,6 +18,117 @@
     --admin-avatar-blue: #c0eeff;
 }
 
+/* Modal styles (global fallback) - ensure modal UI always styled */
+.report-modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(7, 24, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 99999;
+}
+
+.report-modal-overlay[hidden] {
+    display: none !important;
+}
+
+.report-modal-card {
+    width: min(620px, 100%);
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid rgba(84,139,184,0.12);
+    box-shadow: 0 18px 40px rgba(10, 38, 64, 0.18);
+    padding: 20px;
+    pointer-events: auto;
+    z-index: 100000;
+}
+
+.report-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.report-modal-kicker {
+    margin: 0 0 6px;
+    color: #5d84aa;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.report-modal-header h2 {
+    margin: 0;
+    color: #173e62;
+    font-size: 24px;
+}
+
+.report-modal-close {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 50%;
+    background: #f4f6f9;
+    color: #173e62;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.report-modal-form { display: grid; gap: 12px; }
+
+.report-field {
+    display: grid;
+    gap: 8px;
+    color: #173e62;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.report-field textarea {
+    width: 100%;
+    border: 1px solid #c9dcec;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #173e62;
+    font: inherit;
+    padding: 12px 14px;
+    outline: none;
+    resize: vertical;
+    min-height: 110px;
+}
+
+.report-modal-target {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #eaf5ff;
+    color: #173e62;
+}
+
+.report-modal-actions { display:flex; justify-content:flex-end; gap:10px; }
+.report-modal-cancel { background:#dbe8f4; color:#244867; border:0; padding:8px 16px; border-radius:999px; cursor:pointer; }
+.report-modal-submit { background:#2b79c2; color:#fff; border:0; padding:8px 16px; border-radius:999px; cursor:pointer; }
+
+/* Lock body scroll while modal open */
+.report-modal-open { overflow: hidden; }
+
+/* Action specific header accent via data-action on overlay */
+.report-modal-overlay[data-action="ban"] .report-modal-card {
+    border-left: 6px solid #e55e57;
+}
+.report-modal-overlay[data-action="warn"] .report-modal-card {
+    border-left: 6px solid #ffbd67;
+}
+.report-modal-overlay[data-action="unban"] .report-modal-card {
+    border-left: 6px solid #7bd389;
+}
 * {
     box-sizing: border-box;
 }
@@ -458,14 +569,14 @@ body.admin-dashboard-page {
 }
 
 .admin-home-page .admin-stats {
-    grid-template-columns: repeat(3, 287px);
-    gap: 54px;
-    width: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+    width: 100%;
     margin-bottom: 28px;
 }
 
 .admin-home-page .admin-stat-card {
-    width: 287px;
+    width: 100%;
     min-height: 132px;
     gap: 22px;
     padding: 24px 30px;
@@ -489,9 +600,10 @@ body.admin-dashboard-page {
 }
 
 .admin-home-page .admin-panels {
-    grid-template-columns: 566px 367px;
-    gap: 35px;
-    width: auto;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 24px;
+    width: 100%;
+    align-items: stretch;
 }
 
 .admin-home-page .admin-panel {
@@ -501,15 +613,27 @@ body.admin-dashboard-page {
 }
 
 .admin-home-page .report-panel {
-    width: 566px;
     min-height: 533px;
     padding: 20px 30px 24px;
 }
 
 .admin-home-page .banned-panel {
-    width: 367px;
     min-height: 530px;
     padding: 20px 20px 24px;
+}
+
+.admin-home-page .report-panel,
+.admin-home-page .banned-panel {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-home-page .queue-list,
+.admin-home-page .banned-list {
+    flex: 1;
+    align-content: start;
 }
 
 .admin-home-page .panel-heading {
@@ -1011,5 +1135,117 @@ body.admin-dashboard-page {
     .queue-item,
     .banned-item {
         min-height: 44px;
+    }
+
+    /* Modal styles (same as chat monitor) */
+    .report-modal-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: rgba(7, 24, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 99999;
+    }
+
+    .report-modal-overlay[hidden] {
+        display: none !important;
+    }
+
+    .report-modal-card {
+        width: min(620px, 100%);
+        border-radius: 12px;
+        background: #fff;
+        border: 1px solid rgba(84,139,184,0.12);
+        box-shadow: 0 18px 40px rgba(10, 38, 64, 0.18);
+        padding: 20px;
+        pointer-events: auto;
+        z-index: 100000;
+    }
+
+    .report-modal-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+
+    .report-modal-kicker {
+        margin: 0 0 6px;
+        color: #5d84aa;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .report-modal-header h2 {
+        margin: 0;
+        color: #173e62;
+        font-size: 24px;
+    }
+
+    .report-modal-close {
+        width: 36px;
+        height: 36px;
+        border: 0;
+        border-radius: 50%;
+        background: #f4f6f9;
+        color: #173e62;
+        font-size: 24px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .report-modal-form { display: grid; gap: 12px; }
+
+    .report-field {
+        display: grid;
+        gap: 8px;
+        color: #173e62;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .report-field textarea {
+        width: 100%;
+        border: 1px solid #c9dcec;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #173e62;
+        font: inherit;
+        padding: 12px 14px;
+        outline: none;
+        resize: vertical;
+        min-height: 110px;
+    }
+
+    .report-modal-target {
+        margin: 0;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: #eaf5ff;
+        color: #173e62;
+    }
+
+    .report-modal-actions { display:flex; justify-content:flex-end; gap:10px; }
+    .report-modal-cancel { background:#dbe8f4; color:#244867; border:0; padding:8px 16px; border-radius:999px; cursor:pointer; }
+    .report-modal-submit { background:#2b79c2; color:#fff; border:0; padding:8px 16px; border-radius:999px; cursor:pointer; }
+
+    /* Lock body scroll while modal open */
+    .report-modal-open { overflow: hidden; }
+
+    /* Action specific header accent via data-action on overlay */
+    .report-modal-overlay[data-action="ban"] .report-modal-card {
+        border-left: 6px solid #e55e57;
+    }
+    .report-modal-overlay[data-action="warn"] .report-modal-card {
+        border-left: 6px solid #ffbd67;
+    }
+    .report-modal-overlay[data-action="unban"] .report-modal-card {
+        border-left: 6px solid #7bd389;
     }
 }

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/moderation.php';
 
 if (!isset($_SESSION['admin']['admin_id'])) {
     header('Location: login.php');
@@ -8,6 +9,10 @@ if (!isset($_SESSION['admin']['admin_id'])) {
 }
 
 $adminName = (string) ($_SESSION['admin']['full_name'] ?? 'Admin');
+$dashboardSnapshot = moderation_get_dashboard_snapshot();
+$dashboardSummary = $dashboardSnapshot['summary'];
+$dashboardReports = $dashboardSnapshot['reports'];
+$dashboardActivities = $dashboardSnapshot['recent_activities'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -95,7 +100,7 @@ $adminName = (string) ($_SESSION['admin']['full_name'] ?? 'Admin');
                         <span class="admin-stat-icon"><i class="fa-solid fa-users"></i></span>
                         <div>
                             <p>Total Students</p>
-                            <strong>255</strong>
+                            <strong><?php echo esc((string) ($dashboardSummary['users_total'] ?? 0)); ?></strong>
                         </div>
                     </article>
 
@@ -103,7 +108,7 @@ $adminName = (string) ($_SESSION['admin']['full_name'] ?? 'Admin');
                         <span class="admin-stat-icon"><i class="fa-regular fa-note-sticky"></i></span>
                         <div>
                             <p>Pending Reports</p>
-                            <strong>15</strong>
+                            <strong><?php echo esc((string) ($dashboardSummary['reports_pending'] ?? 0)); ?></strong>
                         </div>
                     </article>
 
@@ -111,7 +116,7 @@ $adminName = (string) ($_SESSION['admin']['full_name'] ?? 'Admin');
                         <span class="admin-stat-icon"><i class="fa-solid fa-ban"></i></span>
                         <div>
                             <p>Banned Users</p>
-                            <strong>7</strong>
+                            <strong><?php echo esc((string) ($dashboardSummary['users_banned'] ?? 0)); ?></strong>
                         </div>
                     </article>
                 </section>
@@ -120,123 +125,87 @@ $adminName = (string) ($_SESSION['admin']['full_name'] ?? 'Admin');
                     <article class="admin-panel report-panel">
                         <div class="panel-heading">
                             <h2>Report Queue</h2>
-                            <a href="#">View All <i class="fa-regular fa-circle-right"></i></a>
+                            <a href="chat_monitor.php">View All <i class="fa-regular fa-circle-right"></i></a>
                         </div>
 
                         <div class="queue-list">
-                            <div class="queue-item">
-                                <span class="mini-avatar">AZ</span>
-                                <div class="queue-copy">
-                                    <strong>ALIE ZHANG CS</strong>
-                                    <span>Verbal Harassment in CS group</span>
+                            <?php if (empty($dashboardReports)): ?>
+                                <div class="queue-item">
+                                    <span class="mini-avatar">--</span>
+                                    <div class="queue-copy">
+                                        <strong>No reports yet</strong>
+                                        <span>New reports will appear here in real time.</span>
+                                    </div>
+                                    <em class="pill pill-medium">Idle</em>
                                 </div>
-                                <em class="pill pill-high">High</em>
-                            </div>
-
-                            <div class="queue-item">
-                                <span class="mini-avatar">BC</span>
-                                <div class="queue-copy">
-                                    <strong>BOB LEE CY</strong>
-                                    <span>Spam in Shared notes</span>
-                                </div>
-                                <em class="pill pill-medium">Medium</em>
-                            </div>
-
-                            <div class="queue-item">
-                                <span class="mini-avatar">SL</span>
-                                <div class="queue-copy">
-                                    <strong>SARA LEE</strong>
-                                    <span>Inappropriate forum post</span>
-                                </div>
-                                <em class="pill pill-high">High</em>
-                            </div>
-
-                            <div class="queue-item">
-                                <span class="mini-avatar">SL</span>
-                                <div class="queue-copy">
-                                    <strong>SARA LEE</strong>
-                                    <span>Inappropriate forum post</span>
-                                </div>
-                                <em class="pill pill-high">High</em>
-                            </div>
-
-                            <div class="queue-item">
-                                <span class="mini-avatar">SL</span>
-                                <div class="queue-copy">
-                                    <strong>SARA LEE</strong>
-                                    <span>Inappropriate forum post</span>
-                                </div>
-                                <em class="pill pill-high">High</em>
-                            </div>
+                            <?php else: ?>
+                                <?php foreach ($dashboardReports as $report): ?>
+                                    <a class="queue-item" href="chat_monitor.php?report_id=<?php echo esc($report['report_id']); ?>" style="text-decoration:none; color:inherit;">
+                                        <span class="mini-avatar"><?php echo esc($report['reporter_initials'] ?? 'U'); ?></span>
+                                        <div class="queue-copy">
+                                            <strong><?php echo esc($report['reporter_name'] ?: 'Unknown reporter'); ?></strong>
+                                            <span><?php echo esc($report['reason'] ?: $report['category']); ?></span>
+                                        </div>
+                                        <em class="pill pill-<?php echo esc($report['priority'] === 'high' ? 'high' : ($report['priority'] === 'medium' ? 'medium' : 'medium')); ?>"><?php echo esc(ucfirst($report['priority'])); ?></em>
+                                    </a>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
                     </article>
 
                     <article class="admin-panel banned-panel">
                         <div class="panel-heading">
-                            <h2>Recently Banned</h2>
-                            <a href="#">Manage <i class="fa-regular fa-circle-right"></i></a>
+                            <h2>Recent Activities</h2>
+                            <a href="banned_users.php">Manage <i class="fa-regular fa-circle-right"></i></a>
                         </div>
 
                         <div class="banned-list">
-                            <div class="banned-item">
-                                <span class="mini-avatar">MK</span>
-                                <div>
-                                    <strong>MIKE<br>KWAN</strong>
+                            <?php if (empty($dashboardActivities)): ?>
+                                <div class="banned-item">
+                                    <span class="mini-avatar">--</span>
+                                    <div>
+                                        <strong>No recent activities</strong>
+                                    </div>
+                                    <div class="banned-meta">
+                                        <em>Idle</em>
+                                        <span>Nothing to review</span>
+                                    </div>
                                 </div>
-                                <div class="banned-meta">
-                                    <em>Banned</em>
-                                    <span>3 days ago</span>
-                                </div>
-                            </div>
-
-                            <div class="banned-item">
-                                <span class="mini-avatar">JP</span>
-                                <div>
-                                    <strong>JAKE<br>PARK</strong>
-                                </div>
-                                <div class="banned-meta">
-                                    <em>Banned</em>
-                                    <span>3 days ago</span>
-                                </div>
-                            </div>
-
-                            <div class="banned-item">
-                                <span class="mini-avatar">RK</span>
-                                <div>
-                                    <strong>RAJ<br>KUMAR</strong>
-                                </div>
-                                <div class="banned-meta">
-                                    <em>Banned</em>
-                                    <span>5 days ago</span>
-                                </div>
-                            </div>
-
-                            <div class="banned-item">
-                                <span class="mini-avatar">RK</span>
-                                <div>
-                                    <strong>RAJ<br>KUMAR</strong>
-                                </div>
-                                <div class="banned-meta">
-                                    <em>Banned</em>
-                                    <span>7 days ago</span>
-                                </div>
-                            </div>
-
-                            <div class="banned-item">
-                                <span class="mini-avatar">RK</span>
-                                <div>
-                                    <strong>RAJ<br>KUMAR</strong>
-                                </div>
-                                <div class="banned-meta">
-                                    <em>Banned</em>
-                                    <span>14 days ago</span>
-                                </div>
-                            </div>
+                            <?php else: ?>
+                                <?php foreach ($dashboardActivities as $act): ?>
+                                    <?php if (($act['type'] ?? '') === 'user'): ?>
+                                        <a class="banned-item" href="banned_users.php?user_id=<?php echo esc($act['id'] ?? ''); ?>" style="text-decoration:none; color:inherit;">
+                                            <span class="mini-avatar"><?php echo esc($act['raw']['initials'] ?? '--'); ?></span>
+                                            <div>
+                                                <strong><?php echo esc($act['title'] ?? 'User'); ?></strong>
+                                            </div>
+                                            <div class="banned-meta">
+                                                <em><?php echo esc(ucfirst($act['subtitle'] ?? '')); ?></em>
+                                                <span><?php echo esc($act['raw']['updated_at'] ?? 'Just updated'); ?></span>
+                                            </div>
+                                        </a>
+                                    <?php else: ?>
+                                        <a class="banned-item" href="chat_monitor.php?report_id=<?php echo esc($act['id'] ?? ''); ?>" style="text-decoration:none; color:inherit;">
+                                            <span class="mini-avatar"><?php echo esc($act['raw']['reporter_initials'] ?? '--'); ?></span>
+                                            <div>
+                                                <strong><?php echo esc($act['title'] ?? 'Report'); ?></strong>
+                                                <span><?php echo esc($act['subtitle'] ?? ''); ?></span>
+                                            </div>
+                                            <div class="banned-meta">
+                                                <em><?php echo esc(ucfirst($act['meta'] ?? '')); ?></em>
+                                                <span><?php echo esc($act['raw']['updated_at'] ?? $act['raw']['created_at'] ?? ''); ?></span>
+                                            </div>
+                                        </a>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
                     </article>
                 </section>
             </main>
         </div>
     </div>
+    <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
+    <script src="../assets/js/moderation.js"></script>
 </body>
 </html>

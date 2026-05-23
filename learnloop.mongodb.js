@@ -170,6 +170,41 @@ db.createCollection("notifications", {
 	}
 });
 
+db.createCollection("reports", {
+	validator: {
+		$jsonSchema: {
+			bsonType: "object",
+			required: ["report_id", "report_type", "message_id", "group_name", "priority", "status", "reporter_id", "reported_user_id", "created_at"],
+			properties: {
+				report_id: { bsonType: "string" },
+				report_type: { bsonType: "string" },
+				message_id: { bsonType: "string" },
+				group_id: { bsonType: "string" },
+				group_name: { bsonType: "string" },
+				category: { bsonType: "string" },
+				priority: { bsonType: "string" },
+				status: { bsonType: "string" },
+				reason: { bsonType: "string" },
+				details: { bsonType: "string" },
+				message_excerpt: { bsonType: "string" },
+				evidence_file_name: { bsonType: "string" },
+				evidence_file_path: { bsonType: "string" },
+				evidence_file_type: { bsonType: "string" },
+				reporter_id: { bsonType: "string" },
+				reporter_name: { bsonType: "string" },
+				reported_user_id: { bsonType: "string" },
+				reported_user_name: { bsonType: "string" },
+				admin_note: { bsonType: "string" },
+				admin_id: { bsonType: "string" },
+				admin_name: { bsonType: "string" },
+				created_at: { bsonType: "date" },
+				updated_at: { bsonType: "date" },
+				reviewed_at: { bsonType: ["date", "null"] }
+			}
+		}
+	}
+});
+
 db.createCollection("group_members", {
 	validator: {
 		$jsonSchema: {
@@ -217,6 +252,11 @@ db.notifications.createIndex({ notification_id: 1 }, { unique: true });
 db.notifications.createIndex({ recipient_id: 1 });
 db.notifications.createIndex({ sender_id: 1 });
 db.notifications.createIndex({ recipient_id: 1, status: 1 });
+
+db.reports.createIndex({ report_id: 1 }, { unique: true });
+db.reports.createIndex({ status: 1, created_at: -1 });
+db.reports.createIndex({ reporter_id: 1, created_at: -1 });
+db.reports.createIndex({ reported_user_id: 1, created_at: -1 });
 
 db.group_members.createIndex({ member_id: 1 }, { unique: true });
 db.group_members.createIndex({ group_id: 1 });
