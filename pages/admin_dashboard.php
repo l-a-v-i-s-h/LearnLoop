@@ -20,6 +20,7 @@ $dashboardActivities = $dashboardSnapshot['recent_activities'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LearnLoop | Admin Dashboard</title>
+    <link rel="stylesheet" href="../assets/css/admin_dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body class="admin-dashboard-page admin-home-page">
@@ -57,7 +58,7 @@ $dashboardActivities = $dashboardSnapshot['recent_activities'];
                         <span>Dashboard</span>
                     </a>
 
-                    <a class="admin-nav-item" href="#">
+                    <a class="admin-nav-item" href="all_students.php">
                         <i class="fa-solid fa-user-graduate"></i>
                         <span>All Students</span>
                     </a>
