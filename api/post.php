@@ -41,14 +41,17 @@ if (in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
 }
 
 if ($requestMethod === 'POST') {
-	if (!$isForumWriter) {
-		respond_error(401);
-		exit;
-	}
-
 	if ($apiAction === 'comment') {
+		if (!$isForumWriter && !$isForumAdmin) {
+			respond_error(401);
+			exit;
+		}
 		create_comment($postsCollection, $commentsCollection);
 	} else {
+		if (!$isForumWriter) {
+			respond_error(401);
+			exit;
+		}
 		create_post($postsCollection, $usersCollection);
 	}
 	exit;
@@ -64,14 +67,17 @@ if ($requestMethod === 'GET') {
 }
 
 if ($requestMethod === 'PUT' || $requestMethod === 'PATCH') {
-	if (!$isForumWriter) {
-		respond_error(401);
-		exit;
-	}
-
 	if ($apiAction === 'comment') {
+		if (!$isForumWriter && !$isForumAdmin) {
+			respond_error(401);
+			exit;
+		}
 		update_comment($commentsCollection);
 	} else {
+		if (!$isForumWriter) {
+			respond_error(401);
+			exit;
+		}
 		update_post($postsCollection);
 	}
 	exit;
@@ -189,13 +195,14 @@ function create_comment(mixed $postsCollection, mixed $commentsCollection): void
 	$commentId = bin2hex(random_bytes(8));
 	$userId = current_user_id();
 	$now = new MongoDB\BSON\UTCDateTime();
-	$displayName = trim((string) ($_SESSION['user']['full_name'] ?? $_SESSION['user']['username'] ?? 'User'));
+	$displayName = trim((string) ($_SESSION['user']['full_name'] ?? $_SESSION['user']['username'] ?? $_SESSION['admin']['full_name'] ?? 'User'));
 
 	try {
 		$commentsCollection->insertOne([
 			'comment_id' => $commentId,
 			'post_id' => $postId,
 			'user_id' => $userId,
+			'user_name' => $displayName,
 			'content' => $content,
 			'created_at' => $now
 		]);
@@ -445,12 +452,14 @@ function delete_post(mixed $postsCollection, mixed $commentsCollection): void
 	}
 
 	$userId = current_user_id();
+	$isAdmin = is_admin_session();
+	$postFilter = ['post_id' => $postId];
+	if (!$isAdmin) {
+		$postFilter['user_id'] = $userId;
+	}
 
 	try {
-		$post = $postsCollection->findOne([
-			'post_id' => $postId,
-			'user_id' => $userId
-		]);
+		$post = $postsCollection->findOne($postFilter);
 	} catch (Exception $e) {
 		respond_error(500);
 		return;
@@ -466,10 +475,7 @@ function delete_post(mixed $postsCollection, mixed $commentsCollection): void
 			'post_id' => $postId
 		]);
 
-		$result = $postsCollection->deleteOne([
-			'post_id' => $postId,
-			'user_id' => $userId
-		]);
+		$result = $postsCollection->deleteOne($postFilter);
 	} catch (Exception $e) {
 		respond_error(500);
 		return;
@@ -564,6 +570,9 @@ function get_post_replies(mixed $commentsCollection, mixed $usersCollection, str
 	foreach ($cursor as $comment) {
 		$text = $comment['content'] ?? '';
 		$replyUserName = get_post_author_name($usersCollection, (string) ($comment['user_id'] ?? ''));
+		if ($replyUserName === '') {
+			$replyUserName = trim((string) ($comment['user_name'] ?? ''));
+		}
 
 		$replies[] = [
 			'comment_id' => $comment['comment_id'] ?? '',
