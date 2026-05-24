@@ -9,12 +9,12 @@
     </div>
 
     <div class="user-controls" style="display: flex; align-items: center; gap: 20px;">
-        <div style="display: flex; align-items: center; gap: 12px; color: #1e3a5f; font-weight: 500;">
+        <a href="profile.php" style="display: flex; align-items: center; gap: 12px; color: #1e3a5f; font-weight: 500; text-decoration: none;">
             <div style="background: white; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 <i class="fa-solid fa-graduation-cap" style="font-size: 20px;"></i>
             </div>
             <span>Student</span>
-        </div>
+        </a>
         
         <!-- Notification Bell Icon -->
         <div class="notification-container" style="position: relative;">

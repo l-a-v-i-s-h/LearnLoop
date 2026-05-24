@@ -135,6 +135,11 @@
     line-height: 1.4;
 }
 
+.notification-item-reason {
+    color: #e74c3c;
+    font-weight: 600;
+}
+
 .notification-item-group {
     font-size: 12px;
     color: #007bff;

@@ -126,6 +126,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!notificationList) return;
 
+        function formatNotificationMessage(message) {
+            const text = String(message || '');
+            const reasonIndex = text.indexOf('Reason:');
+
+            if (reasonIndex === -1) {
+                return esc(text);
+            }
+
+            const beforeReason = text.slice(0, reasonIndex);
+            const reasonText = text.slice(reasonIndex);
+
+            return esc(beforeReason) + '<span class="notification-item-reason">' + esc(reasonText) + '</span>';
+        }
+
         if (notifications.length === 0) {
             notificationList.innerHTML = `
                 <div class="notification-empty">
@@ -190,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${deleteButton}
                     </div>
                     <p class="notification-item-group">📚 ${esc(notification.group_name)}</p>
-                    <p class="notification-item-message">${esc(notification.message)}</p>
+                    <p class="notification-item-message">${formatNotificationMessage(notification.message)}</p>
                     ${actionButtons}
                 </div>
             `;

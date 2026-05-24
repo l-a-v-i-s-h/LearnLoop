@@ -1130,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="padding: 10px; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                 <div style="flex: 1; min-width: 0;">
                     <p style="margin: 0 0 4px; font-size: 13px; color: #333; word-break: break-all;">${esc(inv.recipient_email)}</p>
-                    <small style="color: #999; font-size: 12px;">${formatTime(inv.created_at)}</small>
+                    <small style="color: #999; font-size: 12px;">Sent today</small>
                 </div>
                 <div style="display: flex; gap: 4px; flex-shrink: 0;">
                     <button
