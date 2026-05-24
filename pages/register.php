@@ -1,8 +1,14 @@
-
 <?php
 require_once __DIR__ . '/../config/db.php';
+
+// Capture error message and clear it from session
 $error = $_SESSION['error'] ?? '';
 unset($_SESSION['error']);
+
+// Capture old form input data so the user doesn't retype everything
+$old_name = $_SESSION['old_input']['fullname'] ?? '';
+$old_email = $_SESSION['old_input']['email'] ?? '';
+unset($_SESSION['old_input']); 
 ?>
 
 <!DOCTYPE html>
@@ -22,9 +28,8 @@ unset($_SESSION['error']);
             <p class="tagline">Create your account</p>
         </div>
 
-
         <?php if ($error !== ''): ?>
-            <div style="background:#fee; color:#900; padding:10px; border-radius:6px; margin-bottom:10px;">
+            <div style="background:#fee; color:#900; padding:10px; border-radius:6px; margin-bottom:10px; font-size:14px; text-align:center;">
                 <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
             </div>
         <?php endif; ?>
@@ -34,16 +39,34 @@ unset($_SESSION['error']);
 
             <div class="input-group">
                 <label>Full Name</label>
-                <input type="text" name="fullname" placeholder="John Doe" required>
+                <input 
+                    type="text" 
+                    name="fullname" 
+                    placeholder="John Doe" 
+                    value="<?php echo htmlspecialchars($old_name, ENT_QUOTES, 'UTF-8'); ?>" 
+                    required
+                >
             </div>
 
             <div class="input-group">
                 <label>Email Address</label>
-                <input type="email" name="email" placeholder="email@example.com" required>
+                <input 
+                    type="email" 
+                    name="email" 
+                    placeholder="email@example.com" 
+                    value="<?php echo htmlspecialchars($old_email, ENT_QUOTES, 'UTF-8'); ?>" 
+                    required
+                >
             </div>
             
             <div class="input-group">
                 <label>Password</label>
+                <input 
+                    type="password" 
+                    name="password" 
+                    placeholder="••••••••" 
+                    required
+                >
                 <div class="password-field">
                     <input type="password" name="password" placeholder="••••••••" required>
                     <button type="button" class="password-toggle" aria-label="Show password" data-password-toggle data-password-label="password">
