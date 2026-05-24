@@ -107,6 +107,7 @@
   }
 
   function canDeleteQuestion(question) {
+    if (isAdminForum) return true;
     return canEditQuestion(question);
   }
 
@@ -450,19 +451,17 @@
           <div class="q-body" ${isOpen ? "" : "hidden"}>
             <div class="replies-label">ANSWERS / REPLIES</div>
             ${repliesHtml}
-            ${isAdminForum ? "" : `
-              <form class="reply-form" data-action="reply-form" data-id="${q.id}">
-                <textarea
-                  class="reply-input"
-                  name="replyText"
-                  placeholder="Write a reply..."
-                  rows="1"
-                  required
-                >${esc(replyTextValue)}</textarea>
-                <button type="submit" class="btn-reply">${replySubmitLabel}</button>
-                ${replyCancelHtml}
-              </form>
-            `}
+            <form class="reply-form" data-action="reply-form" data-id="${q.id}">
+              <textarea
+                class="reply-input"
+                name="replyText"
+                placeholder="Write a reply..."
+                rows="1"
+                required
+              >${esc(replyTextValue)}</textarea>
+              <button type="submit" class="btn-reply">${replySubmitLabel}</button>
+              ${replyCancelHtml}
+            </form>
           </div>
         </div>
       `;
@@ -733,7 +732,7 @@
 
       const reply = question.replies.find(r => r.id === replyId);
       if (!reply) return;
-      if (!canEditReply(reply)) return;
+      if (!canDeleteReply(reply)) return;
 
       openReplyDeleteModal(postId, replyId);
       return;
@@ -767,13 +766,12 @@
 
     const deleteBtn = e.target.closest('button[data-action="delete"]');
     if (deleteBtn) {
-      if (isAdminForum) return;
       const id = String(deleteBtn.dataset.id || "");
       if (!id) return;
 
       const question = questions.find(q => q.id === id);
       if (!question) return;
-      if (!canEditQuestion(question)) return;
+      if (!canDeleteQuestion(question)) return;
 
       openDeleteModal(id);
       return;
