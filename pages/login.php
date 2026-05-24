@@ -37,7 +37,12 @@ unset($_SESSION['error']);
             
             <div class="input-group">
                 <label>Password</label>
-                <input type="password" name="password" placeholder="Enter your password" required>
+                <div class="password-field">
+                    <input type="password" name="password" placeholder="Enter your password" required>
+                    <button type="button" class="password-toggle" aria-label="Show password" data-password-toggle data-password-label="password">
+                        <i class="fa-regular fa-eye"></i>
+                    </button>
+                </div>
             </div>
 
 
@@ -54,5 +59,6 @@ unset($_SESSION['error']);
 
         <p class="switch-auth">New to the Loop? <a href="register.php">Create Account</a></p>
     </div>
+    <script src="../assets/js/auth-password.js"></script>
 </body>
 </html>

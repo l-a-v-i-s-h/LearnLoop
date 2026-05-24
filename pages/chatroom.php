@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/moderation.php';
 
 if (!isset($_SESSION['user'])) {
     header('Location: login.php');
@@ -25,6 +26,9 @@ if (!$group) {
 
 $groupId = $group['group_id'] ?? '';
 $isGroupOwner = ($group && ($group['user_id'] ?? '') === $user['user_id']) ? 'true' : 'false';
+$moderationState = moderation_get_user_state((string) ($user['user_id'] ?? ''));
+$currentStatus = moderation_normalize_status($moderationState['moderation_status'] ?? 'active');
+$canChat = !in_array($currentStatus, ['banned', 'suspended', 'deleted'], true);
 
 // If not owner, ensure the user is a member of this specific group
 if ($isGroupOwner !== 'true') {
@@ -94,6 +98,28 @@ $membersJson = json_encode($members);
                 <h1 class="study-title-figma"><?php echo esc($groupName); ?> Room</h1>
             </div>
 
+                <?php if ($currentStatus === 'banned'): ?>
+                    <div class="moderation-banner moderation-banner-banned" id="moderationBanner" data-status="banned" data-reason="<?php echo esc($moderationState['moderation_reason'] ?? ''); ?>">
+                        <strong>Your account is banned.</strong>
+                        <span><?php echo esc($moderationState['moderation_reason'] ?? 'Contact an administrator for help.'); ?></span>
+                    </div>
+                <?php elseif ($currentStatus === 'suspended'): ?>
+                    <div class="moderation-banner moderation-banner-banned" id="moderationBanner" data-status="suspended" data-reason="<?php echo esc($moderationState['moderation_reason'] ?? ''); ?>">
+                        <strong>Your account is suspended.</strong>
+                        <span><?php echo esc($moderationState['moderation_reason'] ?? 'Contact an administrator for help.'); ?></span>
+                    </div>
+                <?php elseif ($currentStatus === 'deleted'): ?>
+                    <div class="moderation-banner moderation-banner-banned" id="moderationBanner" data-status="deleted" data-reason="<?php echo esc($moderationState['moderation_reason'] ?? ''); ?>">
+                        <strong>Your account has been removed.</strong>
+                        <span><?php echo esc($moderationState['moderation_reason'] ?? 'Contact an administrator for help.'); ?></span>
+                    </div>
+                <?php elseif ($currentStatus === 'warned'): ?>
+                    <div class="moderation-banner moderation-banner-warned" id="moderationBanner" data-status="warned" data-reason="<?php echo esc($moderationState['moderation_reason'] ?? ''); ?>">
+                        <strong>Your account has been warned.</strong>
+                        <span><?php echo esc($moderationState['moderation_reason'] ?? 'Please follow the community guidelines.'); ?></span>
+                    </div>
+                <?php endif; ?>
+
             <div class="study-layout-flex">
                 <div
                     class="chat-box-figma"
@@ -103,6 +129,8 @@ $membersJson = json_encode($members);
                     data-is-owner="<?php echo $isGroupOwner; ?>"
                     data-user-id="<?php echo esc($user['user_id'] ?? ''); ?>"
                     data-user-name="<?php echo esc($user['full_name'] ?? 'Student'); ?>"
+                    data-moderation-status="<?php echo esc($moderationState['moderation_status'] ?? 'active'); ?>"
+                    data-moderation-reason="<?php echo esc($moderationState['moderation_reason'] ?? ''); ?>"
                     data-members="<?php echo htmlspecialchars($membersJson, ENT_QUOTES, 'UTF-8'); ?>"
                 >
                     <div class="messages-container" id="chatMessages">
@@ -148,6 +176,58 @@ $membersJson = json_encode($members);
         </main>
     </div>
 
+    <div class="report-modal-overlay" id="reportModal" hidden>
+        <div class="report-modal-card" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+            <div class="report-modal-header">
+                <div>
+                    <p class="report-modal-kicker">Safety report</p>
+                    <h2 id="reportModalTitle">Report a user</h2>
+                </div>
+                <button type="button" class="report-modal-close" id="reportModalClose" aria-label="Close report form">&times;</button>
+            </div>
+
+            <form id="reportForm" class="report-modal-form" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="report_chat">
+                <input type="hidden" name="message_id" id="reportMessageId">
+                <input type="hidden" name="reported_user_id" id="reportUserId">
+                <input type="hidden" name="reported_user_name" id="reportUserName">
+                <input type="hidden" name="message_excerpt" id="reportMessageExcerpt">
+                <input type="hidden" name="group_id" id="reportGroupId" value="<?php echo esc($groupId); ?>">
+                <input type="hidden" name="group_name" id="reportGroupName" value="<?php echo esc($groupName); ?>">
+
+                <div class="report-modal-summary">
+                    <strong>Reporting</strong>
+                    <span id="reportSummaryUser">Selected user</span>
+                </div>
+
+                <label class="report-field">
+                    <span>Proof photo</span>
+                    <input type="file" name="proof_photo" id="reportProofPhoto" accept="image/png,image/jpeg,image/jpg,image/webp" required>
+                </label>
+
+                <label class="report-field">
+                    <span>Description</span>
+                    <textarea name="details" id="reportDetails" rows="4" placeholder="Explain what happened and why you are reporting this user." required></textarea>
+                </label>
+
+                <label class="report-field">
+                    <span>Priority</span>
+                    <select name="priority" id="reportPriority" required>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="low">Low</option>
+                    </select>
+                </label>
+
+                <div class="report-modal-actions">
+                    <button type="button" class="report-modal-cancel" id="reportModalCancel">Cancel</button>
+                    <button type="submit" class="report-modal-submit">Submit report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
     <script src="../assets/js/chat.js?v=<?php echo $v; ?>"></script>
 </body>
 </html>

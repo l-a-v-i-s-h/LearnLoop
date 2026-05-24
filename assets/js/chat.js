@@ -5,14 +5,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('sendBtn');
     const attachBtn = document.getElementById('attachBtn');
     const fileInput = document.getElementById('fileInput');
+    const reportModal = document.getElementById('reportModal');
+    const reportModalClose = document.getElementById('reportModalClose');
+    const reportModalCancel = document.getElementById('reportModalCancel');
+    const reportForm = document.getElementById('reportForm');
+    const reportMessageId = document.getElementById('reportMessageId');
+    const reportUserId = document.getElementById('reportUserId');
+    const reportUserName = document.getElementById('reportUserName');
+    const reportMessageExcerpt = document.getElementById('reportMessageExcerpt');
+    const reportSummaryUser = document.getElementById('reportSummaryUser');
+    const reportDetails = document.getElementById('reportDetails');
+    const reportPriority = document.getElementById('reportPriority');
+    const reportProofPhoto = document.getElementById('reportProofPhoto');
 
     const groupName = chatBox ? (chatBox.dataset.group || 'General') : 'General';
     const currentUserId = chatBox ? (chatBox.dataset.userId || '') : '';
     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
     const csrfToken = csrfMeta ? (csrfMeta.getAttribute('content') || '') : '';
+    const PUSHER_KEY = '14db4509a104fa2c4d52';
+    const PUSHER_CLUSTER = 'ap2';
     let activeInlineEdit = null;
     let skipOutsideCloseOnce = false;
     let pendingFiles = [];
+    let messages = [];
+    let realtimeEnabled = false;
+    let moderationState = {
+        status: String(chatBox ? (chatBox.dataset.moderationStatus || 'active') : 'active'),
+        reason: String(chatBox ? (chatBox.dataset.moderationReason || '') : '')
+    };
+    let canSendMessages = !['banned', 'suspended', 'deleted'].includes(moderationState.status);
     const MAX_UPLOAD_COUNT = 5;
     const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 MB
     const ALLOWED_EXT = ['pdf','doc','docx','ppt','pptx','txt','png','jpg','jpeg','zip'];
@@ -30,6 +51,46 @@ document.addEventListener('DOMContentLoaded', () => {
             msgInput.readOnly = false;
             msgInput.title = '';
         }
+    }
+
+    function openReportModal(triggerEl) {
+        if (!reportModal || !reportForm) {
+            return;
+        }
+
+        const messageId = triggerEl.getAttribute('data-message-id') || '';
+        const reportedUserId = triggerEl.getAttribute('data-message-user-id') || '';
+        const reportedUserNameValue = triggerEl.getAttribute('data-message-user-name') || 'User';
+        const messageExcerpt = triggerEl.getAttribute('data-message-text') || '';
+
+        reportMessageId.value = messageId;
+        reportUserId.value = reportedUserId;
+        reportUserName.value = reportedUserNameValue;
+        reportMessageExcerpt.value = messageExcerpt;
+        if (reportSummaryUser) {
+            reportSummaryUser.textContent = reportedUserNameValue;
+        }
+
+        reportDetails.value = '';
+        reportPriority.value = 'medium';
+        if (reportProofPhoto) {
+            reportProofPhoto.value = '';
+        }
+
+        reportModal.hidden = false;
+        document.body.classList.add('report-modal-open');
+        if (reportProofPhoto) {
+            reportProofPhoto.focus();
+        }
+    }
+
+    function closeReportModal() {
+        if (!reportModal) {
+            return;
+        }
+
+        reportModal.hidden = true;
+        document.body.classList.remove('report-modal-open');
     }
 
     function esc(value) {
@@ -115,13 +176,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     : '')
                 + '</div>'
                 + '</div>';
+        } else if (item.user_id) {
+            actionsHtml = '<div class="msg-actions">'
+                + '<button class="msg-menu-btn report-btn" type="button" data-action="report" data-message-id="' + esc(item.message_id) + '" data-message-user-id="' + esc(item.user_id) + '" data-message-user-name="' + esc(item.sender_name || '') + '" data-message-group="' + esc(item.group || groupName) + '" data-message-text="' + esc(item.message || '') + '" data-message-type="' + esc(item.type || 'text') + '" data-message-file-name="' + esc(item.file_name || '') + '" data-message-file-path="' + esc(item.file_path || '') + '" aria-label="Report user"><i class="fa-solid fa-flag"></i></button>'
+                + '</div>';
         }
 
         const contentHtml = '<div class="message-content">'
-            + '<div class="msg-meta' + (isSent ? ' sent' : '') + '">'
-            + (!isSent ? '<span class="msg-sender">' + esc(sender) + '</span>' : '')
-            + (timeText ? '<span class="msg-time">' + esc(timeText) + '</span>' : '')
-            + '</div>'
             + '<div class="bubble-wrap"><p class="bubble">' + bubbleHtml + '</p>' + actionsHtml + '</div>'
             + '</div>';
 
@@ -146,6 +207,103 @@ document.addEventListener('DOMContentLoaded', () => {
 
         messagesEl.innerHTML = items.map(renderMessage).join('');
         messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setMessages(items) {
+        messages = Array.isArray(items) ? items : [];
+        renderMessages(messages);
+    }
+
+    function applyModerationState(nextState) {
+        const status = String(nextState && nextState.status ? nextState.status : 'active').toLowerCase();
+        const reason = String(nextState && nextState.reason ? nextState.reason : '');
+
+        moderationState = { status, reason };
+        canSendMessages = !['banned', 'suspended', 'deleted'].includes(status);
+
+        if (msgInput && sendBtn && attachBtn) {
+            const blocked = !canSendMessages;
+            msgInput.readOnly = blocked;
+            msgInput.placeholder = blocked ? 'Messaging is disabled for this account' : 'Type something...';
+            msgInput.title = blocked && reason ? reason : '';
+            sendBtn.disabled = blocked;
+            attachBtn.disabled = blocked;
+        }
+
+        const banner = document.getElementById('moderationBanner');
+        if (banner) {
+            banner.dataset.status = status;
+            banner.dataset.reason = reason;
+            if (status === 'banned') {
+                banner.style.display = 'flex';
+                banner.innerHTML = '<strong>Your account is temporarily blocked from sending chat messages.</strong><span>' + esc(reason || 'Contact an administrator for help.') + '</span>';
+            } else if (status === 'suspended') {
+                banner.style.display = 'flex';
+                banner.innerHTML = '<strong>Your account is suspended.</strong><span>' + esc(reason || 'Contact an administrator for help.') + '</span>';
+            } else if (status === 'deleted') {
+                banner.style.display = 'flex';
+                banner.innerHTML = '<strong>Your account has been removed.</strong><span>' + esc(reason || 'Contact an administrator for help.') + '</span>';
+            } else if (status === 'warned') {
+                banner.style.display = 'flex';
+                banner.innerHTML = '<strong>Your account has been warned.</strong><span>' + esc(reason || 'Please follow the community guidelines.') + '</span>';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+    }
+
+    async function loadModerationState() {
+        try {
+            const response = await fetch('../api/moderation.php?action=self_status', {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            const data = await response.json();
+
+            if (data && data.success && data.data) {
+                applyModerationState(data.data);
+            }
+        } catch (error) {
+            console.error('Failed to load moderation state:', error);
+        }
+    }
+
+    async function reportUserFromMessage(triggerEl) {
+        if (!triggerEl) {
+            return;
+        }
+
+        openReportModal(triggerEl);
+    }
+
+    function sortMessages() {
+        messages.sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
+    }
+
+    function upsertMessage(item) {
+        if (!item || !item.message_id) {
+            return;
+        }
+
+        const existingIndex = messages.findIndex(m => m.message_id === item.message_id);
+        if (existingIndex >= 0) {
+            messages[existingIndex] = { ...messages[existingIndex], ...item };
+        } else {
+            messages.push(item);
+        }
+
+        sortMessages();
+        renderMessages(messages);
+    }
+
+    function removeMessage(messageId) {
+        if (!messageId) {
+            return;
+        }
+
+        messages = messages.filter(m => m.message_id !== messageId);
+        renderMessages(messages);
     }
 
     function closeAllMenus() {
@@ -262,7 +420,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            await loadMessages();
+            if (!realtimeEnabled) {
+                await loadMessages();
+            }
         };
 
         saveBtn.addEventListener('click', submitInlineEdit);
@@ -362,13 +522,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            await loadMessages();
+            if (!realtimeEnabled) {
+                await loadMessages();
+            }
         });
     }
 
     async function unsendMessage(messageId) {
         // kept for compatibility; unsend now uses inline confirm
-        if (messageId) {
+        if (messageId && !realtimeEnabled) {
             await loadMessages();
         }
     }
@@ -381,14 +543,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await fetch('../api/chat.php?group=' + encodeURIComponent(groupName));
         const data = await response.json();
         if (!data.success) {
-            renderMessages([]);
+            setMessages([]);
             return;
         }
-        renderMessages(data.data || []);
+        setMessages(data.data || []);
     }
 
     async function sendCurrentMessage() {
         if (!msgInput || !sendBtn) {
+            return;
+        }
+
+        if (!canSendMessages) {
+            notify('error', moderationState.reason || 'Messaging is disabled for this account.');
             return;
         }
 
@@ -425,11 +592,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         msgInput.value = '';
-        await loadMessages();
+        if (!realtimeEnabled) {
+            await loadMessages();
+        }
     }
 
     async function sendFileMessage(files) {
         if (!files || !attachBtn) return;
+
+        if (!canSendMessages) {
+            notify('error', moderationState.reason || 'Messaging is disabled for this account.');
+            return;
+        }
 
         const formData = new FormData();
         formData.append('group', groupName);
@@ -465,7 +639,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         resetPendingFile();
-        await loadMessages();
+        if (!realtimeEnabled) {
+            await loadMessages();
+        }
     }
 
     if (sendBtn) {
@@ -559,6 +735,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (action === 'edit') {
                     openInlineEditor(item, messageId, oldText);
                 }
+
+                if (action === 'report') {
+                    reportUserFromMessage(item);
+                }
                 return;
             }
 
@@ -590,8 +770,182 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (reportModalClose) {
+        reportModalClose.addEventListener('click', closeReportModal);
+    }
+
+    if (reportModalCancel) {
+        reportModalCancel.addEventListener('click', closeReportModal);
+    }
+
+    if (reportModal) {
+        reportModal.addEventListener('click', (event) => {
+            if (event.target === reportModal) {
+                closeReportModal();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && reportModal && !reportModal.hidden) {
+            closeReportModal();
+        }
+    });
+
+    if (reportForm) {
+        reportForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            if (!reportMessageId.value || !reportUserId.value) {
+                notify('error', 'Report target is missing.');
+                return;
+            }
+
+            if (!reportProofPhoto || !reportProofPhoto.files || reportProofPhoto.files.length === 0) {
+                notify('error', 'Please upload a proof photo.');
+                return;
+            }
+
+            if (!reportDetails.value.trim()) {
+                notify('error', 'Please add a description.');
+                return;
+            }
+
+            const formData = new FormData(reportForm);
+            formData.set('action', 'report_chat');
+            formData.set('message_id', reportMessageId.value);
+            formData.set('reported_user_id', reportUserId.value);
+            formData.set('reported_user_name', reportUserName.value || 'User');
+            formData.set('message_excerpt', reportMessageExcerpt.value || '');
+            formData.set('group_id', chatBox ? (chatBox.dataset.groupId || '') : '');
+            formData.set('group_name', groupName);
+            // Provide a short reason summary (required by server).
+            const shortReason = (reportDetails.value || '').trim().split(/\r?\n/)[0] || '';
+            formData.set('reason', shortReason.substring(0, 120));
+
+            const response = await fetch('../api/moderation.php', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-Token': csrfToken
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+            if (!data.success) {
+                notify('error', data.message || 'Failed to submit report.');
+                return;
+            }
+
+            closeReportModal();
+            notify('success', 'Report submitted for review.');
+        });
+    }
+
+    function initChatRealtime() {
+        if (!window.Pusher || !PUSHER_KEY) {
+            return;
+        }
+
+        const pusher = new window.Pusher(PUSHER_KEY, {
+            cluster: PUSHER_CLUSTER
+        });
+
+        const channel = pusher.subscribe('chat-channel');
+        realtimeEnabled = true;
+
+        const mapPayload = (data) => ({
+            message_id: String(data.message_id || ''),
+            group: String(data.group || ''),
+            user_id: String(data.user_id || ''),
+            sender_name: String(data.sender_name || ''),
+            type: String(data.type || 'text'),
+            message: String(data.message || ''),
+            note_id: String(data.note_id || ''),
+            note_title: String(data.note_title || ''),
+            note_group_id: String(data.note_group_id || ''),
+            note_group_name: String(data.note_group_name || ''),
+            note_visibility: String(data.note_visibility || ''),
+            file_name: String(data.file_name || ''),
+            file_path: String(data.file_path || ''),
+            file_size: Number(data.file_size || 0),
+            edited: Boolean(data.edited),
+            created_at: String(data.created_at || '')
+        });
+
+        channel.bind('message-created', (data) => {
+            if (!data || String(data.group || '') !== groupName) {
+                return;
+            }
+
+            const message = mapPayload(data);
+            if (!message.message_id) {
+                return;
+            }
+
+            upsertMessage(message);
+        });
+
+        channel.bind('message-updated', (data) => {
+            if (!data || String(data.group || '') !== groupName) {
+                return;
+            }
+
+            const message = mapPayload(data);
+            if (!message.message_id) {
+                return;
+            }
+
+            upsertMessage(message);
+        });
+
+        channel.bind('message-deleted', (data) => {
+            if (!data || String(data.group || '') !== groupName) {
+                return;
+            }
+
+            const messageId = String(data.message_id || '');
+            removeMessage(messageId);
+        });
+
+        const moderationChannel = pusher.subscribe('moderation-channel');
+        moderationChannel.bind('user-moderation-updated', (data) => {
+            if (!data || String(data.user_id || '') !== currentUserId) {
+                return;
+            }
+
+            loadModerationState();
+        });
+        moderationChannel.bind('force-logout', (data) => {
+            try {
+                if (!data || String(data.user_id || '') !== currentUserId) return;
+
+                // Build logout form to POST csrf token to logout endpoint
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                const action = 'logout.php';
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = action;
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = '_csrf_token';
+                input.value = csrf;
+                form.appendChild(input);
+
+                document.body.appendChild(form);
+                form.submit();
+            } catch (err) {
+                console.error('force-logout handler failed', err);
+                window.location.href = '/';
+            }
+        });
+    }
+
+    initChatRealtime();
+    loadModerationState();
     loadMessages();
-    setInterval(loadMessages, 10000);
 
     // Load and display group members
     function loadGroupMembers() {

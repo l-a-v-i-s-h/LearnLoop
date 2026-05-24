@@ -67,6 +67,22 @@ unset($_SESSION['old_input']);
                     placeholder="••••••••" 
                     required
                 >
+                <div class="password-field">
+                    <input type="password" name="password" placeholder="••••••••" required>
+                    <button type="button" class="password-toggle" aria-label="Show password" data-password-toggle data-password-label="password">
+                        <i class="fa-regular fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Confirm Password</label>
+                <div class="password-field">
+                    <input type="password" name="confirm_password" placeholder="••••••••" required>
+                    <button type="button" class="password-toggle" aria-label="Show confirm password" data-password-toggle data-password-label="confirm password">
+                        <i class="fa-regular fa-eye"></i>
+                    </button>
+                </div>
             </div>
 
             <button type="submit" class="auth-btn" style="margin-top: 10px;">Create Account</button>
@@ -74,5 +90,6 @@ unset($_SESSION['old_input']);
 
         <p class="switch-auth">Already have an account? <a href="login.php" style="font-weight: 700; text-decoration: underline;">Sign In</a></p>
     </div>
+    <script src="../assets/js/auth-password.js"></script>
 </body>
 </html>

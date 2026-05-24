@@ -70,7 +70,7 @@
 
 .message-row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
     margin-bottom: 20px;
 }
@@ -174,7 +174,7 @@
 .bubble-wrap {
     position: relative;
     display: inline-flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 6px;
 }
 
@@ -288,6 +288,10 @@
     outline-offset: 1px;
 }
 
+.report-btn {
+    color: #d14c4c;
+}
+
 .msg-menu {
     display: none;
     position: absolute;
@@ -319,6 +323,205 @@
 
 .msg-menu-item:hover {
     background: #eef6fc;
+}
+
+.moderation-banner {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid #c9dcec;
+    background: #ffffff;
+    color: #15344c;
+    box-shadow: 0 2px 10px rgba(12, 61, 96, 0.08);
+}
+
+.moderation-banner strong {
+    font-size: 14px;
+}
+
+.moderation-banner span {
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.moderation-banner-warned {
+    border-color: #f4d17b;
+    background: #fff9e8;
+}
+
+.moderation-banner-banned {
+    border-color: #f09b9b;
+    background: #fff1f1;
+}
+
+.report-modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(7, 24, 42, 0.52);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+}
+
+.report-modal-overlay[hidden] {
+    display: none !important;
+}
+
+.report-modal-card {
+    width: min(560px, 100%);
+    border-radius: 18px;
+    background: #f8fbff;
+    border: 1px solid #cfe2f5;
+    box-shadow: 0 26px 60px rgba(10, 38, 64, 0.28);
+    padding: 22px;
+}
+
+.report-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.report-modal-kicker {
+    margin: 0 0 6px;
+    color: #5d84aa;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.report-modal-header h2 {
+    margin: 0;
+    color: #173e62;
+    font-size: 24px;
+}
+
+.report-modal-close {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 50%;
+    background: #e7f1fb;
+    color: #173e62;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.report-modal-form {
+    display: grid;
+    gap: 14px;
+}
+
+.report-modal-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #eaf5ff;
+    color: #173e62;
+}
+
+.report-modal-summary strong {
+    font-size: 14px;
+}
+
+.report-field {
+    display: grid;
+    gap: 8px;
+    color: #173e62;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.report-field input[type="file"],
+.report-field textarea,
+.report-field select {
+    width: 100%;
+    border: 1px solid #c9dcec;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #173e62;
+    font: inherit;
+    padding: 12px 14px;
+    outline: none;
+}
+
+.report-field textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.report-field input[type="file"] {
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.report-field input[type="file"]::file-selector-button {
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-right: 12px;
+    background: #dbeaf8;
+    color: #173e62;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.report-field input[type="file"]::file-selector-button:hover {
+    background: #c9dff4;
+}
+
+.report-field input[type="file"]::-webkit-file-upload-button {
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-right: 12px;
+    background: #dbeaf8;
+    color: #173e62;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.report-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.report-modal-cancel,
+.report-modal-submit {
+    min-height: 40px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 999px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.report-modal-cancel {
+    background: #dbe8f4;
+    color: #244867;
+}
+
+.report-modal-submit {
+    background: #2b79c2;
+    color: #ffffff;
 }
 
 .chat-empty {

@@ -16,6 +16,8 @@ if (!csrf_check($token)) {
 session_unset();
 session_destroy();
 
+remember_forget_cookie_token();
+
 header('Location: login.php');
 exit;
 ?>

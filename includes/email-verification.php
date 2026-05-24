@@ -175,13 +175,13 @@ function send_password_reset_email(string $email, string $fullname): bool
         $mail->isSMTP();
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = 'bimalkandel468@gmail.com';
-        $mail->Password   = 'aubh sawb jqwi anqm';
+        $mail->Username   = 'toastus3rr1@gmail.com';
+        $mail->Password   = 'oeve mekd ycld qjat';
         $mail->SMTPSecure = 'tls';
         $mail->Port       = 587;
         $mail->CharSet    = 'UTF-8';
 
-        $mail->setFrom('bimalkandel468@gmail.com', 'LearnLoop');
+        $mail->setFrom('toastus3rr1@gmail.com', 'LearnLoop');
         $mail->addAddress($email, $fullname);
         $mail->Subject = $subject;
         $mail->isHTML(true);
@@ -278,18 +278,9 @@ function handle_verify_email_process(): void
     unset($_SESSION['temp_email']);
     unset($_SESSION['user_id_pending']);
     
-    // Log user in automatically
-    $user = $users->findOne(['user_id' => $userId]);
-    
-    $_SESSION['user'] = [
-        'user_id' => $user['user_id'],
-        'full_name' => $user['full_name'],
-        'username' => $user['username'],
-        'email' => $user['email'],
-    ];
-    
-    $_SESSION['success'] = 'Email verified successfully! Welcome to LearnLoop.';
-    header('Location: ../pages/dashboard.php');
+    // Do not auto-login after verification. Require explicit sign-in.
+    $_SESSION['success'] = 'Email verified successfully. Please sign in to continue.';
+    header('Location: ../pages/login.php');
     exit;
 }
 

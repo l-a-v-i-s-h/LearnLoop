@@ -62,16 +62,24 @@
   }
 
   function toQuestion(post) {
-    const createdAt = post && post.created_at ? new Date(post.created_at.replace(" ", "T")) : new Date();
+    const createdAtRaw = post && post.created_at ? String(post.created_at) : "";
+    const updatedAtRaw = post && post.updated_at ? String(post.updated_at) : "";
+    const createdAt = createdAtRaw ? new Date(createdAtRaw.replace(" ", "T")) : new Date();
+    const updatedAt = updatedAtRaw ? new Date(updatedAtRaw.replace(" ", "T")) : null;
     const safeDate = Number.isNaN(createdAt.getTime()) ? new Date() : createdAt;
+    const updatedTime = updatedAt && !Number.isNaN(updatedAt.getTime()) ? updatedAt.getTime() : null;
+    const createdTime = safeDate.getTime();
+    const isEdited = updatedTime !== null && updatedTime > createdTime;
     const dbReplies = Array.isArray(post && post.replies) ? post.replies : [];
 
     return {
       id: String(post.post_id || post.id || ""),
       ownerId: String(post.user_id || ""),
+      userName: String(post.user_name || post.userName || ""),
       title: String(post.title || ""),
       description: String(post.description || post.content || ""),
       date: formatDate(safeDate),
+      edited: isEdited,
       replies: dbReplies.map((reply) => ({
         id: String(reply.comment_id || reply.id || ""),
         text: String(reply.text || reply.content || ""),
@@ -99,6 +107,7 @@
   }
 
   function canDeleteQuestion(question) {
+    if (isAdminForum) return true;
     return canEditQuestion(question);
   }
 
@@ -164,6 +173,28 @@
     channel.bind("reply-created", refresh);
     channel.bind("reply-updated", refresh);
     channel.bind("reply-deleted", refresh);
+    const moderationChannel = pusher.subscribe('moderation-channel');
+    moderationChannel.bind('force-logout', (data) => {
+      try {
+        if (!data || String(data.user_id || '') !== currentUserId) return;
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const action = 'logout.php';
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = action;
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = '_csrf_token';
+        input.value = csrf;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+      } catch (err) {
+        console.error('force-logout handler failed', err);
+        window.location.href = '/';
+      }
+    });
   }
 
   async function createQuestion(title, description) {
@@ -341,6 +372,7 @@
       const replyCount = q.replies.length;
       const toggleLabel = isOpen ? "Hide Replies" : "View & Reply";
       const toggleIcon = isOpen ? "fa-chevron-up" : "fa-chevron-down";
+      const authorLabel = q.userName ? `<span class="q-author">Asked by ${esc(q.userName)}</span>` : "";
 
       const repliesHtml = replyCount === 0
         ? `<p class="no-replies">No replies yet. Be the first to respond.</p>`
@@ -404,6 +436,8 @@
               <p class="q-description">${esc(q.description)}</p>
               <div class="q-meta">
                 <span class="reply-count">${replyCount} ${replyCount === 1 ? "Reply" : "Replies"}</span>
+                ${q.edited ? `<span class="edited-badge">Edited</span>` : ""}
+                ${authorLabel}
                 <span>${esc(q.date)}</span>
               </div>
             </div>
@@ -417,19 +451,17 @@
           <div class="q-body" ${isOpen ? "" : "hidden"}>
             <div class="replies-label">ANSWERS / REPLIES</div>
             ${repliesHtml}
-            ${isAdminForum ? "" : `
-              <form class="reply-form" data-action="reply-form" data-id="${q.id}">
-                <textarea
-                  class="reply-input"
-                  name="replyText"
-                  placeholder="Write a reply..."
-                  rows="1"
-                  required
-                >${esc(replyTextValue)}</textarea>
-                <button type="submit" class="btn-reply">${replySubmitLabel}</button>
-                ${replyCancelHtml}
-              </form>
-            `}
+            <form class="reply-form" data-action="reply-form" data-id="${q.id}">
+              <textarea
+                class="reply-input"
+                name="replyText"
+                placeholder="Write a reply..."
+                rows="1"
+                required
+              >${esc(replyTextValue)}</textarea>
+              <button type="submit" class="btn-reply">${replySubmitLabel}</button>
+              ${replyCancelHtml}
+            </form>
           </div>
         </div>
       `;
@@ -634,6 +666,7 @@
       if (target) {
         target.title = title;
         target.description = description;
+        target.edited = true;
         expanded.add(target.id);
       }
       render();
@@ -699,7 +732,7 @@
 
       const reply = question.replies.find(r => r.id === replyId);
       if (!reply) return;
-      if (!canEditReply(reply)) return;
+      if (!canDeleteReply(reply)) return;
 
       openReplyDeleteModal(postId, replyId);
       return;
@@ -733,13 +766,12 @@
 
     const deleteBtn = e.target.closest('button[data-action="delete"]');
     if (deleteBtn) {
-      if (isAdminForum) return;
       const id = String(deleteBtn.dataset.id || "");
       if (!id) return;
 
       const question = questions.find(q => q.id === id);
       if (!question) return;
-      if (!canEditQuestion(question)) return;
+      if (!canDeleteQuestion(question)) return;
 
       openDeleteModal(id);
       return;

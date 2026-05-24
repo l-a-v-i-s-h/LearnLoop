@@ -81,6 +81,21 @@ $user = $_SESSION['user'];
         </div>
     </div>
 
+    <!-- Leave Confirmation Modal (for members) -->
+    <div class="modal-overlay" id="leaveModal">
+        <div class="modal-card modal-leave">
+            <div class="leave-icon">
+                <i class="fa-solid fa-person-running"></i>
+            </div>
+            <h2>Leave Group?</h2>
+            <p>Are you sure you want to leave <strong id="leaveGroupName"></strong>? You will be removed from this group.</p>
+            <div class="leave-actions">
+                <button class="cancel-btn" id="cancelLeave">Cancel</button>
+                <button class="confirm-leave-btn" id="confirmLeave">Leave</button>
+            </div>
+        </div>
+    </div>
+
 </main>
 </div>
 
