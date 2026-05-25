@@ -39,7 +39,12 @@ $statusCounts = [
 
 foreach ($usersCursor as $doc) {
     $fullName = trim((string) ($doc['full_name'] ?? 'Unknown user'));
-    $isVerified = (bool) ($doc['is_verified'] ?? false);
+    $rawVerified = $doc['is_verified'] ?? false;
+    if (is_bool($rawVerified)) {
+        $isVerified = $rawVerified;
+    } else {
+        $isVerified = filter_var($rawVerified, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) === true;
+    }
     $status = $isVerified ? 'active' : 'pending';
 
     $allStudents[] = [
