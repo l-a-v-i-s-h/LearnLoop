@@ -229,6 +229,7 @@ function handle_register_process(): void
             'username' => $username,
             'email' => $email,
             'password_hash' => $passwordHash,
+            'is_verified' => false,
             'created_at' => new MongoDB\BSON\UTCDateTime(),
         ]);
     } catch (MongoDB\Driver\Exception\BulkWriteException $e) {
