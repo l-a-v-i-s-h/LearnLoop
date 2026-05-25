@@ -11,9 +11,8 @@ $adminName = (string) ($_SESSION['admin']['full_name'] ?? 'Admin');
 $bannedSnapshot = moderation_get_dashboard_snapshot();
 $summaryCards = [
     ['label' => 'Total Moderated', 'value' => (string) (($bannedSnapshot['summary']['users_warned'] ?? 0) + ($bannedSnapshot['summary']['users_suspended'] ?? 0) + ($bannedSnapshot['summary']['users_banned'] ?? 0)), 'icon' => 'fa-solid fa-user-group', 'class' => 'banned-total'],
-    ['label' => 'Active', 'value' => (string) ($bannedSnapshot['summary']['users_active'] ?? 0), 'icon' => 'fa-solid fa-check', 'class' => 'banned-active'],
     ['label' => 'Warned', 'value' => (string) ($bannedSnapshot['summary']['users_warned'] ?? 0), 'icon' => 'fa-solid fa-triangle-exclamation', 'class' => 'banned-warned'],
-    ['label' => 'Suspended', 'value' => (string) ($bannedSnapshot['summary']['users_suspended'] ?? 0), 'icon' => 'fa-solid fa-user-lock', 'class' => 'banned-warned'],
+    ['label' => 'Suspended', 'value' => (string) ($bannedSnapshot['summary']['users_suspended'] ?? 0), 'icon' => 'fa-solid fa-user-lock', 'class' => 'banned-suspended'],
     ['label' => 'Banned', 'value' => (string) ($bannedSnapshot['summary']['users_banned'] ?? 0), 'icon' => 'fa-solid fa-ban', 'class' => 'banned-blocked'],
 ];
 
@@ -118,7 +117,6 @@ $bannedUsers = moderation_get_banned_users();
 
                         <div class="banned-filters" aria-label="Banned user filters">
                             <button class="filter-btn is-active" type="button">All</button>
-                            <button class="filter-btn" type="button">Active</button>
                             <button class="filter-btn" type="button">Warned</button>
                             <button class="filter-btn" type="button">Banned</button>
                         </div>

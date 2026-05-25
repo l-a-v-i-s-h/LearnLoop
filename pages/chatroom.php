@@ -28,7 +28,7 @@ $groupId = $group['group_id'] ?? '';
 $isGroupOwner = ($group && ($group['user_id'] ?? '') === $user['user_id']) ? 'true' : 'false';
 $moderationState = moderation_get_user_state((string) ($user['user_id'] ?? ''));
 $currentStatus = moderation_normalize_status($moderationState['moderation_status'] ?? 'active');
-$canChat = !in_array($currentStatus, ['banned', 'suspended', 'deleted'], true);
+$canChat = !in_array($currentStatus, ['banned', 'deleted'], true);
 
 // If not owner, ensure the user is a member of this specific group
 if ($isGroupOwner !== 'true') {

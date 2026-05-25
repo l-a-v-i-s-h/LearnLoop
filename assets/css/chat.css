@@ -821,3 +821,39 @@
     font-size: 11px;
     border: 1px solid #BBF7D0;
 }
+
+@media (max-width: 1024px) {
+    .main-content {
+        padding: 24px;
+    }
+
+    .study-room-header {
+        margin-bottom: 18px;
+    }
+
+    .study-title-figma {
+        font-size: 28px;
+        margin-left: 12px;
+    }
+
+    .study-layout-flex {
+        gap: 18px;
+    }
+
+    .chat-box-figma {
+        min-height: 640px;
+    }
+
+    .members-sidebar-figma {
+        flex-basis: 320px;
+        width: 320px;
+    }
+
+    .message-content {
+        max-width: 60%;
+    }
+
+    .bubble {
+        max-width: min(320px, 100%);
+    }
+}

@@ -69,7 +69,7 @@
     suspend: {
       kicker: 'Confirm suspension',
       title: 'Suspend reported user',
-      message: 'Suspend the user and remove them from the chat group.',
+      message: 'Suspend the user and block them from sending chat messages.',
       reasonLabel: 'Suspension reason',
       reasonPlaceholder: 'Explain why the user is being suspended.',
       confirmText: 'Suspend user',
@@ -78,7 +78,7 @@
     ban: {
       kicker: 'Confirm ban',
       title: 'Ban reported user',
-      message: 'Ban the reported user from LearnLoop. No reason is required.',
+      message: 'Ban the reported user and remove them from the reported group. No reason is required.',
       reasonLabel: 'Reason',
       reasonPlaceholder: 'Optional note for this action.',
       confirmText: 'Ban user',
@@ -90,7 +90,7 @@
     ban: {
       kicker: 'Confirm ban',
       title: 'Ban user',
-      message: 'Ban this user and permanently remove their account from LearnLoop.',
+      message: 'Ban this user and block their chat access.',
       reasonLabel: 'Reason',
       reasonPlaceholder: 'Optional note for this action.',
       confirmText: 'Ban user',

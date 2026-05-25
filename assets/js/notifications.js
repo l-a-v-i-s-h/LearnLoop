@@ -158,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 report_rejected: 'Your report was rejected',
                 user_warned: 'Your account was warned',
                 user_suspended: 'Your account was suspended',
+                user_banned: 'Your account was banned',
                 user_deleted: 'Your account was removed'
             };
             const titleText = titleMap[notification.type] || `${esc(notification.sender_name)} sent you a notification`;

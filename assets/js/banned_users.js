@@ -13,8 +13,6 @@
         const s = (row.getAttribute('data-user-status') || '').toLowerCase();
         if (!status || status === 'all') {
           row.style.display = '';
-        } else if (status === 'active') {
-          row.style.display = (s === 'active') ? '' : 'none';
         } else if (status === 'warned') {
           row.style.display = (s === 'warned') ? '' : 'none';
         } else if (status === 'banned') {

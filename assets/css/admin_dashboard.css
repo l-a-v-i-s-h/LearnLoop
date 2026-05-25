@@ -779,7 +779,11 @@ body.admin-dashboard-page {
 }
 
 .banned-warned {
-    background: var(--admin-peach);
+    background: #fff6bf;
+}
+
+.banned-suspended {
+    background: #ffd7a8;
 }
 
 .banned-blocked {
@@ -840,6 +844,10 @@ body.admin-dashboard-page {
     border: 0;
     font: inherit;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
 }
 
 .filter-btn,
