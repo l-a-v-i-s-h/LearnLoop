@@ -65,7 +65,30 @@
 .messages-container {
     flex: 1;
     overflow-y: auto;
-    padding-bottom: 80px; 
+    padding-bottom: 12px;
+    padding-right: 14px;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(29, 77, 119, 0.55) rgba(255, 255, 255, 0.42);
+}
+
+.messages-container::-webkit-scrollbar {
+    width: 10px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.42);
+    border-radius: 999px;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(77, 127, 173, 0.88), rgba(33, 93, 142, 0.88));
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.42);
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(61, 112, 157, 0.96), rgba(23, 76, 120, 0.96));
 }
 
 .message-row {
@@ -549,17 +572,20 @@
 }
 
 .input-wrapper-figma {
-    position: absolute;
-    bottom: 24px;
-    left: 24px;
-    width: calc(100% - 48px);
+    position: relative;
+    margin-top: auto;
+    width: 100%;
     display: flex;
     align-items: center;
     gap: 15px;
+    padding: 10px 0 0;
+    z-index: 1;
 }
 
 .icon-btn {
-    background: transparent;
+    width: 44px;
+    height: 44px;
+    background: #ffffff;
     border: none;
     color: #3273C4;
     font-size: 18px;
@@ -567,6 +593,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    flex: 0 0 auto;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.icon-btn:hover {
+    background: #f4faff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(18, 63, 98, 0.12);
 }
 
 .input-wrapper-figma input {
@@ -574,7 +610,7 @@
     height: 44.43px; 
     background: var(--white);
     border: none;
-    border-radius: 10px; 
+    border-radius: 12px; 
     padding: 0 15px;
     font-family: 'Inter', sans-serif;
     font-size: 13px;
