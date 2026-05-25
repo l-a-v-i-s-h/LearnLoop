@@ -76,7 +76,7 @@ if (!$isAdminProfile) {
                             <span>Dashboard</span>
                         </a>
 
-                        <a class="admin-nav-item" href="#">
+                        <a class="admin-nav-item" href="all_students.php">
                             <i class="fa-solid fa-user-graduate"></i>
                             <span>All Students</span>
                         </a>

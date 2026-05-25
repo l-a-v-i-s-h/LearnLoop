@@ -3,7 +3,6 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     // --- Interface Core Hook References Selection Matrix ---
-    const filterButtons = Array.from(document.querySelectorAll('.registry-tabs-filter-group .filter-tab-btn'));
     const searchInput = document.getElementById('registryFilterInput');
     const rows = Array.from(document.querySelectorAll('#registryDataRowsCollection .registry-data-table-row'));
 
@@ -14,9 +13,6 @@
     const modalClose = document.getElementById('userModerationClose');
     const modalCancel = document.getElementById('userModerationCancel');
     const modalConfirm = document.getElementById('userModerationConfirm');
-    const addStudentTrigger = document.getElementById('addNewStudentTrigger');
-
-    let activeFilterToken = 'all';
 
     /**
      * Dual Combined Processing Matrix Filtering Execution
@@ -25,17 +21,15 @@
       const queryValue = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
       rows.forEach((row) => {
-        const studentStatus = (row.getAttribute('data-user-status') || '').toLowerCase().trim();
-        
         // Read text elements inside the grid layout row
         const studentName = (row.querySelector('.student-identity-meta strong')?.textContent || '').toLowerCase();
-        const studentCourse = (row.querySelector('.course-bold-tag')?.textContent || '').toLowerCase();
-        const textTargetString = `${studentName} ${studentCourse}`;
+        const studentId = (row.querySelector('.id-hash-dim')?.textContent || '').toLowerCase();
+        const studentEmail = (row.querySelector('.student-text-data-cell')?.textContent || '').toLowerCase();
+        const textTargetString = `${studentName} ${studentEmail} ${studentId}`;
 
         const matchesQuery = textTargetString.includes(queryValue);
-        const matchesFilter = (activeFilterToken === 'all' || studentStatus === activeFilterToken);
 
-        if (matchesQuery && matchesFilter) {
+        if (matchesQuery) {
           row.style.display = 'grid'; // Retain table row structure pattern alignment
         } else {
           row.style.display = 'none';
@@ -47,17 +41,6 @@
     if (searchInput) {
       searchInput.addEventListener('input', performCombinedDataQuery);
     }
-
-    // Filter Navigation Category Trigger Connections
-    filterButtons.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        filterButtons.forEach(b => b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-
-        activeFilterToken = (btn.textContent || '').trim().toLowerCase();
-        performCombinedDataQuery();
-      });
-    });
 
     /**
      * Overlay Layer Controller Actions Definitions
@@ -99,12 +82,6 @@
         }
         alert(`Account target data token entry ${modalUserId.textContent} status flagged cleanly inside interface mockup preview layout context.`);
         closeModerationView();
-      });
-    }
-
-    if (addStudentTrigger) {
-      addStudentTrigger.addEventListener('click', () => {
-        alert('Launching add student prompt interface wizard snapshot...');
       });
     }
 

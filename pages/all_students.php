@@ -1,95 +1,65 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/moderation.php';
 
-// --- SELF-CONTAINED ARCHITECTURE UTILITIES ---
-if (!function_exists('esc')) {
-    function esc($string) {
-        return htmlspecialchars($string ?? '', ENT_QUOTES, 'UTF-8');
-    }
-}
-
-if (!function_exists('csrf_token')) {
-    function csrf_token() {
-        return $_SESSION['csrf_token'] ?? 'mock_token_for_testing';
-    }
-}
-
-if (!function_exists('csrf_input')) {
-    function csrf_input() {
-        return '<input type="hidden" name="csrf_token" value="' . esc(csrf_token()) . '">';
-    }
-}
-
-// --- SECURITY ASSURANCE FLOW ---
 if (!isset($_SESSION['admin']['admin_id'])) {
-    // For local troubleshooting context workspace development purposes:
-    $_SESSION['admin']['admin_id'] = 'dev_root';
-    $_SESSION['admin']['full_name'] = 'Admin';
+    header('Location: login.php');
+    exit;
 }
 
 $adminName = (string) ($_SESSION['admin']['full_name'] ?? 'Admin');
 
 // --- APP DATA STATE SNAPSHOT (Matches Target Design Layout Values) ---
-$summaryCards = [
-    ['label' => 'Total Students', 'value' => '255', 'icon' => 'fa-solid fa-users', 'class' => 'kpi-blue'],
-    ['label' => 'Active', 'value' => '5', 'icon' => 'fa-solid fa-check', 'class' => 'kpi-green'],
-    ['label' => 'Warned', 'value' => '2', 'icon' => 'fa-solid fa-triangle-exclamation', 'class' => 'kpi-orange'],
-    ['label' => 'Banned', 'value' => '7', 'icon' => 'fa-solid fa-user-slash', 'class' => 'kpi-pink'],
+try {
+    $usersCursor = db()->selectCollection('users')->find([], ['sort' => ['created_at' => -1]]);
+} catch (Exception $e) {
+    $usersCursor = [];
+}
+
+try {
+    $reportsCursor = db()->selectCollection('reports')->find([], ['projection' => ['reported_user_id' => 1]]);
+} catch (Exception $e) {
+    $reportsCursor = [];
+}
+
+$reportCounts = [];
+foreach ($reportsCursor as $reportDoc) {
+    $reportedUserId = (string) ($reportDoc['reported_user_id'] ?? '');
+    if ($reportedUserId === '') {
+        continue;
+    }
+    $reportCounts[$reportedUserId] = ($reportCounts[$reportedUserId] ?? 0) + 1;
+}
+
+$allStudents = [];
+$statusCounts = [
+    'active' => 0,
+    'pending' => 0,
 ];
 
-$allStudents = [
-    [
-        'user_id' => 'S001',
-        'full_name' => 'ALICE ZHANG CS',
-        'email' => 'alicezhang@uni.edu',
-        'initials' => 'AZ',
-        'course' => 'BCS',
-        'status' => 'active',
-        'joined_date' => 'March 9, 2025',
-        'reports' => '2'
-    ],
-    [
-        'user_id' => 'S001',
-        'full_name' => 'ALICE ZHANG CS',
-        'email' => 'alicezhang@uni.edu',
-        'initials' => 'AZ',
-        'course' => 'BIBM',
-        'status' => 'active',
-        'joined_date' => 'March 15, 2025',
-        'reports' => '1'
-    ],
-    [
-        'user_id' => 'S002',
-        'full_name' => 'BOB LEE CY',
-        'email' => 'boblee@uni.edu',
-        'initials' => 'BC',
-        'course' => 'BCY',
-        'status' => 'warned',
-        'joined_date' => 'March 18, 2025',
-        'reports' => '6'
-    ],
-    [
-        'user_id' => 'S003',
-        'full_name' => 'SARA LEE',
-        'email' => 'saralee@uni.edu',
-        'initials' => 'SL',
-        'course' => 'BCY',
-        'status' => 'warned',
-        'joined_date' => 'March 25, 2025',
-        'reports' => '5'
-    ],
-    [
-        'user_id' => 'S003',
-        'full_name' => 'SARA LEE',
-        'email' => 'saralee@uni.edu',
-        'initials' => 'SL',
-        'course' => 'BIBM',
-        'status' => 'banned',
-        'joined_date' => 'March 25, 2025',
-        'reports' => '15'
-    ]
+foreach ($usersCursor as $doc) {
+    $fullName = trim((string) ($doc['full_name'] ?? 'Unknown user'));
+    $isVerified = (bool) ($doc['is_verified'] ?? false);
+    $status = $isVerified ? 'active' : 'pending';
+
+    $allStudents[] = [
+        'user_id' => (string) ($doc['user_id'] ?? ''),
+        'full_name' => $fullName !== '' ? $fullName : 'Unknown user',
+        'email' => (string) ($doc['email'] ?? ''),
+        'initials' => moderation_initials($fullName),
+        'status' => $status,
+        'joined_date' => moderation_format_date($doc['created_at'] ?? null),
+        'reports' => (string) ($reportCounts[(string) ($doc['user_id'] ?? '')] ?? 0),
+    ];
+
+    $statusCounts[$status] += 1;
+}
+
+$summarySnapshot = moderation_get_summary();
+$summaryCards = [
+    ['label' => 'Total Students', 'value' => (string) ($summarySnapshot['users_total'] ?? count($allStudents)), 'icon' => 'fa-solid fa-users', 'class' => 'kpi-blue'],
+    ['label' => 'Active', 'value' => (string) $statusCounts['active'], 'icon' => 'fa-solid fa-check', 'class' => 'kpi-green'],
+    ['label' => 'Pending', 'value' => (string) $statusCounts['pending'], 'icon' => 'fa-solid fa-hourglass-half', 'class' => 'kpi-orange'],
 ];
 ?>
 <!DOCTYPE html>
@@ -157,9 +127,6 @@ $allStudents = [
             <main class="admin-main student-registry-main">
                 <div class="registry-page-title">
                     <h1>All Students</h1>
-                    <button class="notification-bell-btn" type="button" aria-label="Alert metrics panel">
-                        <i class="fa-regular fa-bell"></i>
-                    </button>
                 </div>
 
                 <section class="registry-kpi-row" aria-label="Operational high level metrics status cards">
@@ -180,17 +147,11 @@ $allStudents = [
                     <div class="registry-table-toolbar">
                         <label class="registry-search-input-field">
                             <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="search" id="registryFilterInput" placeholder="Search students by name/course..." aria-label="Search records dataset input">
+                            <input type="search" id="registryFilterInput" placeholder="Search students by name, email, or ID..." aria-label="Search records dataset input">
                         </label>
 
                         <div class="registry-tabs-filter-group" aria-label="Dataset state query categorical segment hooks">
                             <button class="filter-tab-btn is-active" type="button">All</button>
-                            <button class="filter-tab-btn" type="button">Active</button>
-                            <button class="filter-tab-btn" type="button">Warned</button>
-                            <button class="filter-tab-btn" type="button">Banned</button>
-                            <button class="action-add-student-btn" type="button" id="addNewStudentTrigger">
-                                <i class="fa-solid fa-plus"></i> Add Students
-                            </button>
                         </div>
                     </div>
 
@@ -198,11 +159,10 @@ $allStudents = [
                         <div class="registry-grid-header-row">
                             <span>Students</span>
                             <span>ID</span>
-                            <span>Course</span>
+                            <span>Email</span>
                             <span>Status</span>
                             <span>Joined</span>
                             <span>Reports</span>
-                            <span style="text-align: center;">Actions</span>
                         </div>
 
                         <div id="registryDataRowsCollection">
@@ -215,12 +175,11 @@ $allStudents = [
                                     <span class="student-avatar-badge"><?php echo esc($student['initials']); ?></span>
                                     <div class="student-identity-meta">
                                         <strong><?php echo esc($student['full_name']); ?></strong>
-                                        <span><?php echo esc($student['email']); ?></span>
                                     </div>
                                 </div>
                                 
                                 <span class="student-text-data-cell id-hash-dim"><?php echo esc($student['user_id']); ?></span>
-                                <span class="student-text-data-cell course-bold-tag"><?php echo esc($student['course']); ?></span>
+                                <span class="student-text-data-cell email-cell"><?php echo esc($student['email']); ?></span>
                                 
                                 <div class="student-text-data-cell">
                                     <span class="status-pill-badge status-pill-<?php echo esc($student['status']); ?>">
@@ -230,11 +189,6 @@ $allStudents = [
                                 
                                 <span class="student-text-data-cell light-date-lbl"><?php echo esc($student['joined_date']); ?></span>
                                 <span class="student-text-data-cell weight-reports-lbl"><?php echo esc($student['reports']); ?></span>
-                                
-                                <div class="student-row-management-actions">
-                                    <a class="action-btn-item view" href="profile.php?view_id=<?php echo esc($student['user_id']); ?>">View</a>
-                                    <button class="action-btn-item ban" type="button" data-user-moderate="restrict" data-user-id="<?php echo esc($student['user_id']); ?>">Ban</button>
-                                </div>
                             </div>
                             <?php endforeach; ?>
                         </div>

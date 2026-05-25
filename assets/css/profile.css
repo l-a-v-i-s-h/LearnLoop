@@ -1,108 +1,81 @@
-/* ===============================
-   ACCOUNT SETTINGS PAGE
-   =============================== */
-
-/* PAGE TITLE */
-.main-content .settings-title {
-    font-size: 28px;
-    font-weight: 600;
-    color: #1e3a5f;
-    margin: 30px 0 10px 40px;
+.settings-title {
+    color: #164870;
+    font-size: 32px;
+    margin-bottom: 40px;
 }
 
-/* FORCE GRID (override dashboard.css flex) */
-.main-content .settings-grid {
-    display: grid !important;
-    grid-template-columns: repeat(2, 450px) !important;
-    justify-content: center !important;
-    gap: 60px !important;
-    margin-top: 30px !important;
-}
-
-/* CARD STYLE */
-.main-content .settings-card {
-    background: #a9c4d6 !important;
-    padding: 40px !important;
-    border-radius: 16px !important;
-    min-height: 450px !important;
-    width: 450px !important;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1) !important;
+.settings-grid {
     display: flex;
-    flex-direction: column;
+    gap: 30px;
 }
 
-/* RIGHT CARD BLUE BORDER */
-.main-content .settings-card:nth-child(2) {
-    border: 2px solid #3b82f6 !important;
+.settings-card {
+    background-color: #D9F0FF;
+    width: 380px;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
-/* CARD HEADINGS */
-.main-content .settings-card h2 {
+.settings-card h2 {
+    color: #164870;
     font-size: 18px;
-    font-weight: 600;
-    color: #1e3a5f;
+    margin-bottom: 25px;
+}
+
+.form-group {
     margin-bottom: 20px;
 }
 
-/* FORM GROUP */
-.main-content .form-group {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 18px;
+.form-group label {
+    display: block;
+    font-size: 12px;
+    color: #164870;
+    margin-bottom: 8px;
 }
 
-/* LABELS */
-.main-content .form-group label {
-    font-size: 13px;
-    color: #1e3a5f;
-    margin-bottom: 6px;
+.form-group input {
+    width: 100%;
+    height: 42px;
+    border: none;
+    border-radius: 8px;
+    padding: 0 15px;
+    box-sizing: border-box;
 }
 
-/* INPUT FIELDS */
-.main-content .settings-card input {
-    width: 100% !important;
-    padding: 15px !important;
-    border-radius: 10px !important;
-    border: none !important;
-    background: #e5e7eb !important;
-    font-size: 14px;
-    outline: none;
+.form-group input[readonly] {
+    background-color: #eef5fb;
+    color: #6b7280;
+    cursor: not-allowed;
 }
 
-/* BUTTON */
-.main-content .btn-settings {
-    margin-top: auto;
-    width: 100% !important;
-    padding: 15px !important;
-    border-radius: 10px !important;
-    background: linear-gradient(to right, #5b9bd5, #4a86c5) !important;
-    color: white !important;
-    border: none !important;
+.btn-settings {
+    width: 100%;
+    height: 45px;
+    background-color: #60A5FA;
+    color: white;
+    border: none;
+    border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
-    transition: 0.3s ease;
 }
 
-/* BUTTON HOVER */
-.main-content .btn-settings:hover {
-    opacity: 0.9;
-}
-
-/* SUCCESS + ERROR MESSAGES */
-.main-content .profile-message {
-    margin: 10px 40px;
-    padding: 12px;
-    border-radius: 8px;
+.profile-message {
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    border-radius: 10px;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
 }
 
-.main-content .success-message {
-    background: #dcfce7;
+.success-message {
+    background-color: #e2f9e1;
     color: #166534;
+    border: 1px solid #bbf7d0;
 }
 
-.main-content .error-message {
-    background: #fee2e2;
+.error-message {
+    background-color: #fee2e2;
     color: #991b1b;
+    border: 1px solid #fecaca;
 }
