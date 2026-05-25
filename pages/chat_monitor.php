@@ -133,9 +133,6 @@ if (!is_array($selectedReport)) {
             <main class="admin-main chat-monitor-main">
                 <div class="chat-monitor-title-row">
                     <h1>Chat Monitor</h1>
-                    <a class="chat-floating-bell" href="#" aria-label="Notifications">
-                        <i class="fa-regular fa-bell"></i>
-                    </a>
                 </div>
 
                 <section class="chat-summary" aria-label="Chat report summary">
