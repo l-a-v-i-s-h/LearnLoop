@@ -147,7 +147,8 @@ function validate_uploaded_files(array $fileField): array
             'name' => $name,
             'tmp_name' => $tmp,
             'size' => $size,
-            'type' => $mime
+            'type' => $mime,
+            'error' => $error
         ];
     }
 

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/file_store.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 
@@ -67,39 +68,15 @@ exit;
 
 function create_note(mixed $notesCollection): void
 {
-	$body = get_request_body();
-
-	$title = safe_input($body['title'] ?? '', 120);
-	$content = safe_input($body['content'] ?? '', 5000);
-
-	if ($title === '' || $content === '') {
-		http_response_code(422);
-		echo json_encode([
-			'success' => false,
-			'message' => 'Title and content are required.'
-		]);
-		return;
-	}
-
-	$noteId = bin2hex(random_bytes(8));
 	$userId = $_SESSION['user']['user_id'];
-	$decodedContent = json_decode($content, true);
-	$groupId = '';
-	$groupName = 'Public';
-	$visibility = 'public';
-	$fileType = 'txt';
-	if (is_array($decodedContent)) {
-		$groupId = trim((string) ($decodedContent['groupId'] ?? $decodedContent['group_id'] ?? ''));
-		$groupName = trim((string) ($decodedContent['groupName'] ?? $decodedContent['group'] ?? 'Public'));
-		$visibility = trim((string) ($decodedContent['visibility'] ?? ''));
-		$fileType = trim((string) ($decodedContent['fileType'] ?? 'txt')) ?: 'txt';
-	}
+	$groupId = clean_text($_POST['group_id'] ?? $_POST['groupId'] ?? 'public');
+	$groupName = clean_text($_POST['group_name'] ?? $_POST['groupName'] ?? 'Public');
+	$visibility = clean_text($_POST['visibility'] ?? 'public');
+	$groupId = $groupId === '' ? 'public' : $groupId;
+	$groupName = $groupName === '' ? 'Public' : $groupName;
+	$visibility = $visibility === '' ? 'public' : $visibility;
 
-	if ($groupId === '' || $visibility === 'public') {
-		$groupId = 'public';
-		$groupName = 'Public';
-		$visibility = 'public';
-	} else {
+	if ($groupId !== 'public' && $visibility !== 'public') {
 		$group = $GLOBALS['groupsCollection']->findOne(['group_id' => $groupId]);
 		if (!$group) {
 			http_response_code(404);
@@ -130,86 +107,161 @@ function create_note(mixed $notesCollection): void
 		$visibility = 'private_group';
 	}
 
-	// Placeholder path string for now since actual binary file upload is not implemented yet.
-	$fileUrl = 'notes/' . $userId . '/' . $noteId . '-' . preg_replace('/\s+/', '-', strtolower($title));
-	$now = new MongoDB\BSON\UTCDateTime();
-
-	try {
-		$notesCollection->insertOne([
-			'note_id' => $noteId,
-			'user_id' => $userId,
-			'group_id' => $groupId,
-			'group_name' => $groupName,
-			'visibility' => $visibility,
-			'file_url' => $fileUrl,
-			'uploaded_at' => $now,
-			'title' => $title,
-			'content' => $content,
-			'created_at' => $now,
-			'updated_at' => $now
-		]);
-	} catch (Exception $e) {
-		http_response_code(500);
+	$filesInput = $_FILES['file'] ?? $_FILES['files'] ?? null;
+	if (empty($filesInput)) {
+		http_response_code(422);
 		echo json_encode([
 			'success' => false,
-			'message' => 'Failed to add note. Please check note data and try again.'
+			'message' => 'A file is required.'
 		]);
 		return;
 	}
 
-	trigger_note_event('note-created', [
-		'user_id' => $userId,
-		'note_id' => $noteId,
-		'title' => $title,
-		'content' => $content,
-		'group_id' => $groupId,
-		'group_name' => $groupName,
-		'visibility' => $visibility,
-		'created_at' => format_mongo_date($now)
-	]);
+	$validation = validate_uploaded_files($filesInput);
+	if (!empty($validation['errors'])) {
+		http_response_code(422);
+		echo json_encode([
+			'success' => false,
+			'message' => 'One or more files failed validation.',
+			'errors' => $validation['errors']
+		]);
+		return;
+	}
 
-	if ($visibility === 'private_group' && $groupId !== 'public') {
-		$postToChat = $GLOBALS['chatCollection'] ?? null;
-		if ($postToChat) {
-			try {
-				$chatMessageId = bin2hex(random_bytes(8));
-				$postToChat->insertOne([
-					'message_id' => $chatMessageId,
-					'group' => $groupName,
-					'user_id' => $userId,
-					'sender_name' => $_SESSION['user']['full_name'] ?? 'User',
-					'type' => 'note',
-					'message' => 'Shared a study note',
-					'note_id' => $noteId,
-					'note_title' => $title,
-					'note_group_id' => $groupId,
-					'note_group_name' => $groupName,
-					'note_visibility' => $visibility,
-					'file_name' => '',
-					'file_path' => '',
-					'file_size' => 0,
-					'edited' => false,
-					'created_at' => $now
-				]);
-			} catch (Exception $e) {
-				// Do not fail note upload if chat post fails.
+	$validFiles = $validation['validFiles'];
+	if (count($validFiles) === 0) {
+		http_response_code(422);
+		echo json_encode([
+			'success' => false,
+			'message' => 'No valid files to upload.'
+		]);
+		return;
+	}
+
+	$createdNotes = [];
+	foreach ($validFiles as $file) {
+		$title = safe_input($_POST['title'] ?? $file['name'], 120);
+		$content = json_encode([
+			'groupId' => $groupId,
+			'groupName' => $groupName,
+			'visibility' => $visibility,
+			'sizeBytes' => (int) $file['size'],
+			'fileType' => pathinfo((string) $file['name'], PATHINFO_EXTENSION) ?: 'txt'
+		]);
+
+		$stored = learnloop_store_single_file($file, [
+			'context' => 'note',
+			'owner_id' => $userId,
+			'group_id' => $groupId,
+			'group_name' => $groupName,
+			'visibility' => $visibility,
+		]);
+
+		if (!$stored[0]) {
+			http_response_code(500);
+			echo json_encode([
+				'success' => false,
+				'message' => $stored[1] ?: 'Failed to store note file.'
+			]);
+			return;
+		}
+
+		$noteId = bin2hex(random_bytes(8));
+		$now = new MongoDB\BSON\UTCDateTime();
+		$fileUrl = 'api/notes.php?action=download&note_id=' . $noteId;
+
+		try {
+			$notesCollection->insertOne([
+				'note_id' => $noteId,
+				'user_id' => $userId,
+				'group_id' => $groupId,
+				'group_name' => $groupName,
+				'visibility' => $visibility,
+				'file_url' => $fileUrl,
+				'file_id' => $stored[2]['file_id'],
+				'file_name' => $stored[2]['file_name'],
+				'file_size' => (int) $stored[2]['file_size'],
+				'file_type' => $stored[2]['mime_type'],
+				'uploaded_at' => $now,
+				'title' => $title !== '' ? $title : $stored[2]['file_name'],
+				'content' => $content,
+				'created_at' => $now,
+				'updated_at' => $now
+			]);
+		} catch (Exception $e) {
+			learnloop_delete_stored_file($stored[2]['file_id']);
+			http_response_code(500);
+			echo json_encode([
+				'success' => false,
+				'message' => 'Failed to add note. Please check note data and try again.'
+			]);
+			return;
+		}
+
+		trigger_note_event('note-created', [
+			'user_id' => $userId,
+			'note_id' => $noteId,
+			'title' => $title !== '' ? $title : $stored[2]['file_name'],
+			'content' => $content,
+			'group_id' => $groupId,
+			'group_name' => $groupName,
+			'visibility' => $visibility,
+			'file_name' => $stored[2]['file_name'],
+			'file_size' => (int) $stored[2]['file_size'],
+			'created_at' => format_mongo_date($now)
+		]);
+
+		if ($visibility === 'private_group' && $groupId !== 'public') {
+			$postToChat = $GLOBALS['chatCollection'] ?? null;
+			if ($postToChat) {
+				try {
+					$chatMessageId = bin2hex(random_bytes(8));
+					$postToChat->insertOne([
+						'message_id' => $chatMessageId,
+						'group' => $groupName,
+						'user_id' => $userId,
+						'sender_name' => $_SESSION['user']['full_name'] ?? 'User',
+						'type' => 'note',
+						'message' => 'Shared a study note',
+						'note_id' => $noteId,
+						'note_title' => $title !== '' ? $title : $stored[2]['file_name'],
+						'note_group_id' => $groupId,
+						'note_group_name' => $groupName,
+						'note_visibility' => $visibility,
+						'file_id' => $stored[2]['file_id'],
+						'file_name' => $stored[2]['file_name'],
+						'file_path' => $fileUrl,
+						'file_size' => (int) $stored[2]['file_size'],
+						'edited' => false,
+						'created_at' => $now
+					]);
+				} catch (Exception $e) {
+					// Do not fail note upload if chat post fails.
+				}
 			}
 		}
+
+		$createdNotes[] = [
+			'note_id' => $noteId,
+			'title' => $title !== '' ? $title : $stored[2]['file_name'],
+			'content' => $content,
+			'group_id' => $groupId,
+			'group_name' => $groupName,
+			'visibility' => $visibility,
+			'user_id' => $userId,
+			'file_id' => $stored[2]['file_id'],
+			'file_name' => $stored[2]['file_name'],
+			'file_size' => (int) $stored[2]['file_size'],
+			'file_type' => $stored[2]['mime_type'],
+			'file_url' => $fileUrl,
+		];
 	}
 
 	http_response_code(201);
 	echo json_encode([
 		'success' => true,
 		'message' => 'Note added successfully.',
-		'data' => [
-			'note_id' => $noteId,
-			'title' => $title,
-			'content' => $content,
-			'group_id' => $groupId,
-			'group_name' => $groupName,
-			'visibility' => $visibility,
-			'user_id' => $userId
-		]
+		'data' => count($createdNotes) === 1 ? $createdNotes[0] : $createdNotes
 	]);
 }
 
@@ -252,6 +304,11 @@ function get_notes(mixed $notesCollection): void
 			'group_id' => $doc['group_id'] ?? 'public',
 			'group_name' => $doc['group_name'] ?? ($visibility === 'public' ? 'Public' : 'Shared group'),
 			'visibility' => $visibility,
+			'file_id' => $doc['file_id'] ?? '',
+			'file_name' => $doc['file_name'] ?? $doc['title'] ?? '',
+			'file_size' => (int) ($doc['file_size'] ?? 0),
+			'file_type' => $doc['file_type'] ?? '',
+			'file_url' => $doc['file_url'] ?? '',
 			'can_delete' => $isOwn,
 			'can_download' => ($visibility === 'public' || $isOwn),
 			'created_at' => format_mongo_date($doc['created_at'] ?? ($doc['uploaded_at'] ?? null)),
@@ -283,6 +340,29 @@ function delete_note(mixed $notesCollection): void
 	$userId = $_SESSION['user']['user_id'];
 
 	try {
+		$note = $notesCollection->findOne([
+			'note_id' => $noteId,
+			'user_id' => $userId
+		]);
+	} catch (Exception $e) {
+		http_response_code(500);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Failed to delete note.'
+		]);
+		return;
+	}
+
+	if (!$note) {
+		http_response_code(404);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Note not found.'
+		]);
+		return;
+	}
+
+	try {
 		$result = $notesCollection->deleteOne([
 			'note_id' => $noteId,
 			'user_id' => $userId
@@ -303,6 +383,15 @@ function delete_note(mixed $notesCollection): void
 			'message' => 'Note not found.'
 		]);
 		return;
+	}
+
+	if (!empty($note['file_id'])) {
+		learnloop_delete_stored_file((string) $note['file_id']);
+	} elseif (!empty($note['file_url']) && str_starts_with((string) $note['file_url'], 'notes/')) {
+		$legacyPath = __DIR__ . '/../' . ltrim((string) $note['file_url'], '/\\');
+		if (is_file($legacyPath)) {
+			@unlink($legacyPath);
+		}
 	}
 
 	echo json_encode([
@@ -392,23 +481,23 @@ function download_note(mixed $notesCollection): void
 		}
 	}
 
-	// Generate file content
+	if (!empty($note['file_id']) && learnloop_stream_stored_file((string) $note['file_id'])) {
+		return;
+	}
+
+	// Legacy fallback for older note records.
 	$title = $note['title'] ?? 'document';
 	$content = $note['content'] ?? '';
-
-	// Parse content to get file info
 	$contentData = json_decode($content, true);
 	$fileType = $contentData['fileType'] ?? 'txt';
 	$groupLabel = $note['group_name'] ?? ($contentData['groupName'] ?? ($visibility === 'public' ? 'Public' : 'Shared group'));
 
-	// Create simple text file for download
 	$fileContent = "Title: " . $title . "\n";
 	$fileContent .= "Group: " . $groupLabel . "\n";
 	$fileContent .= "Date: " . (isset($note['created_at']) ? format_mongo_date($note['created_at']) : date('Y-m-d H:i:s')) . "\n";
 	$fileContent .= "---\n\n";
 	$fileContent .= "Content: " . $content . "\n";
 
-	// Set headers for download
 	header('Content-Type: application/octet-stream');
 	header('Content-Disposition: attachment; filename="' . basename($title) . '.' . $fileType . '"');
 	header('Content-Length: ' . strlen($fileContent));

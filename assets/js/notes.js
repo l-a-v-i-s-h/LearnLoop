@@ -139,12 +139,14 @@
     const groupName = String(note.group_name || content.groupName || (visibility === "public" ? "Public" : "Shared group"));
     const ownerId = String(note.user_id || "");
     const currentUserOwns = ownerId && ownerId === currentUserId;
+    const fileName = String(note.file_name || note.title || "Untitled");
+    const fileSize = Number(note.file_size || content.sizeBytes || 0);
 
     return {
       id: String(note.note_id || ""),
-      name: note.title || "Untitled",
+      name: fileName,
       group: groupName,
-      sizeBytes: content.sizeBytes,
+      sizeBytes: fileSize,
       date: formatApiDate(note.created_at),
       visibility,
       ownerId,
@@ -322,18 +324,26 @@
       const groupName = targetGroup.value ? String(selectedGroup && selectedGroup.group_name ? selectedGroup.group_name : targetGroup.options[targetGroup.selectedIndex]?.text || "") : "Public";
 
       for (const f of pendingFiles) {
-        const contentJson = JSON.stringify({
-          groupId,
-          groupName,
-          visibility,
-          sizeBytes: f.size,
-          fileType: getExt(f.name)
+        const formData = new FormData();
+        formData.append("title", f.name);
+        formData.append("group_id", groupId);
+        formData.append("group_name", groupName);
+        formData.append("visibility", visibility);
+        formData.append("file", f, f.name);
+        formData.append("_csrf_token", csrfToken);
+
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "X-CSRF-Token": csrfToken
+          },
+          body: formData
         });
 
-        const payload = await apiRequest("POST", {
-          title: f.name,
-          content: contentJson
-        });
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.message || "Could not upload note.");
+        }
 
         const created = payload.data || null;
         if (created && created.note_id) {
@@ -345,6 +355,9 @@
             group_name: created.group_name,
             visibility: created.visibility,
             user_id: created.user_id,
+            file_name: created.file_name,
+            file_size: created.file_size,
+            file_type: created.file_type,
             created_at: new Date().toISOString().slice(0, 19).replace("T", " ")
           }));
         }

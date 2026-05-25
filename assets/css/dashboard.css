@@ -84,13 +84,15 @@ body {
   padding: 18px 22px;
   border-radius: 15px;
   font-size: 18px;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
   width: 100%;
   min-height: 64px;
 }
 
 .nav-item a:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background-color: #d6e9f8;
+  color: #1e3a5f;
+  font-weight: 600;
 }
 
 .nav-item.active a {
@@ -101,9 +103,17 @@ body {
 
 .icon-box {
   margin-right: 15px;
-  width: 26px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: white;
+  color: #1e3a5f;
   flex-shrink: 0;
   text-align: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
 /* CONTENT AREA */

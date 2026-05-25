@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/file_store.php';
 
 function moderation_reports_collection(): MongoDB\Collection
 {
@@ -242,6 +243,7 @@ function moderation_report_snapshot(mixed $doc): array
         'reporter_course' => (string) ($doc['reporter_course'] ?? ''),
         'reported_user_course' => (string) ($doc['reported_user_course'] ?? ''),
         'message_excerpt' => (string) ($doc['message_excerpt'] ?? ''),
+        'evidence_file_id' => (string) ($doc['evidence_file_id'] ?? ''),
         'evidence_file_name' => (string) ($doc['evidence_file_name'] ?? ''),
         'evidence_file_path' => (string) ($doc['evidence_file_path'] ?? ''),
         'evidence_file_type' => (string) ($doc['evidence_file_type'] ?? ''),
@@ -486,6 +488,11 @@ function moderation_delete_report(string $reportId, string $adminId = '', string
         (string) ($report['group_name'] ?? '')
     );
 
+    $evidenceFileId = (string) ($report['evidence_file_id'] ?? '');
+    if ($evidenceFileId !== '') {
+        learnloop_delete_stored_file($evidenceFileId);
+    }
+
     $evidencePath = (string) ($report['evidence_file_path'] ?? '');
     if ($evidencePath !== '' && str_starts_with($evidencePath, 'uploads/reports/')) {
         $fullPath = __DIR__ . '/../' . $evidencePath;
@@ -716,6 +723,7 @@ function moderation_create_report(array $payload, array $reporter): array
     $reason = trim((string) ($payload['reason'] ?? ''));
     $details = trim((string) ($payload['details'] ?? ''));
     $messageExcerpt = trim((string) ($payload['message_excerpt'] ?? ''));
+    $evidenceFileId = trim((string) ($payload['evidence_file_id'] ?? ''));
     $evidenceFileName = trim((string) ($payload['evidence_file_name'] ?? ''));
     $evidenceFilePath = trim((string) ($payload['evidence_file_path'] ?? ''));
     $evidenceFileType = trim((string) ($payload['evidence_file_type'] ?? ''));
@@ -751,6 +759,7 @@ function moderation_create_report(array $payload, array $reporter): array
             'reported_user_id' => $reportedUserId,
             'reported_user_name' => $reportedUserName,
             'reported_user_course' => $payload['reported_user_course'] ?? '',
+            'evidence_file_id' => $evidenceFileId,
             'evidence_file_name' => $evidenceFileName,
             'evidence_file_path' => $evidenceFilePath,
             'evidence_file_type' => $evidenceFileType,

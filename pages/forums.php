@@ -47,10 +47,10 @@ $current_page = 'forums';
                 </label>
 
                 <div class="admin-profile">
-                    <div class="admin-profile-copy">
+                    <a href="profile.php" class="admin-profile-copy" aria-label="Open account page">
                         <span class="admin-avatar"><i class="fa-regular fa-user"></i></span>
                         <span><?php echo esc($forumAdminName); ?></span>
-                    </div>
+                    </a>
 
                     <form action="../api/auth.php?action=admin-logout" method="POST" style="margin: 0;">
                         <?php echo csrf_input(); ?>
