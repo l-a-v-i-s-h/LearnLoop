@@ -399,6 +399,27 @@ function moderation_remove_user_from_groups(string $userId): int
     }
 }
 
+function moderation_remove_user_from_group(string $userId, string $groupId): int
+{
+    $userId = trim($userId);
+    $groupId = trim($groupId);
+
+    if ($userId === '' || $groupId === '') {
+        return 0;
+    }
+
+    try {
+        $result = moderation_group_members_collection()->deleteMany([
+            'user_id' => $userId,
+            'group_id' => $groupId,
+        ]);
+
+        return (int) $result->getDeletedCount();
+    } catch (Exception $e) {
+        return 0;
+    }
+}
+
 function moderation_remove_user_messages(string $userId): int
 {
     if ($userId === '') {
@@ -854,7 +875,6 @@ function moderation_review_report(string $reportId, string $status, string $admi
                 return [false, 'Report updated, but suspending the user failed.', null];
             }
 
-            moderation_remove_user_from_groups($reportedUserId);
             moderation_send_notification(
                 $reportedUserId,
                 'Your account has been suspended. Reason: ' . $targetReason,
@@ -865,10 +885,24 @@ function moderation_review_report(string $reportId, string $status, string $admi
                 (string) ($report['group_name'] ?? '')
             );
         } elseif ($moderationAction === 'ban') {
-            $deleteResult = moderation_delete_user_account($reportedUserId, $adminId, $adminName);
-            if (!$deleteResult[0]) {
-                return [false, 'Report updated, but deleting the user failed.', null];
+            if (!moderation_set_user_status($reportedUserId, 'banned', $targetReason, $adminId, $adminName)) {
+                return [false, 'Report updated, but banning the user failed.', null];
             }
+
+            $groupId = (string) ($report['group_id'] ?? '');
+            if ($groupId !== '') {
+                moderation_remove_user_from_group($reportedUserId, $groupId);
+            }
+
+            moderation_send_notification(
+                $reportedUserId,
+                'Your account has been banned. Reason: ' . $targetReason,
+                'user_banned',
+                $adminId,
+                $adminName,
+                $groupId,
+                (string) ($report['group_name'] ?? '')
+            );
         } elseif ($moderationAction === 'unban') {
             if (!moderation_set_user_status($reportedUserId, 'active', $targetReason, $adminId, $adminName)) {
                 return [false, 'Report updated, but unbanning the user failed.', null];
@@ -913,15 +947,25 @@ function moderation_apply_user_action(string $userId, string $status, string $re
     }
 
     if ($status === 'banned') {
-        return moderation_delete_user_account($userId, $adminId, $adminName);
+        if (!moderation_set_user_status($userId, $status, $reason, $adminId, $adminName)) {
+            return [false, 'Failed to update user moderation status.', null];
+        }
+
+        moderation_send_notification(
+            $userId,
+            'Your account has been banned. Reason: ' . ($reason !== '' ? $reason : 'Admin decision'),
+            'user_banned',
+            $adminId,
+            $adminName
+        );
+
+        return [true, 'User moderation updated successfully.', moderation_get_user_state($userId)];
     }
 
     if ($status === 'suspended') {
         if (!moderation_set_user_status($userId, $status, $reason, $adminId, $adminName)) {
             return [false, 'Failed to update user moderation status.', null];
         }
-
-        moderation_remove_user_from_groups($userId);
         moderation_send_notification(
             $userId,
             'Your account has been suspended. Reason: ' . ($reason !== '' ? $reason : 'Admin decision'),
