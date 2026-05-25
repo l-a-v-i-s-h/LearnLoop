@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/moderation.php';
 require_once __DIR__ . '/../includes/upload.php';
+require_once __DIR__ . '/../includes/file_store.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 
@@ -41,6 +42,19 @@ if ($method === 'GET') {
     if ($action === 'self_status') {
         $userId = $hasUser ? (string) ($_SESSION['user']['user_id'] ?? '') : '';
         respond_json(200, true, 'Moderation status fetched.', moderation_get_user_state($userId));
+        exit;
+    }
+
+    if ($action === 'download_report_evidence') {
+        if (!$hasAdmin) {
+            respond_json(403, false, 'Admin access required.');
+            exit;
+        }
+
+        $fileId = clean_text($_GET['file_id'] ?? '');
+        if ($fileId === '' || !learnloop_stream_stored_file($fileId)) {
+            respond_json(404, false, 'File not found.');
+        }
         exit;
     }
 
@@ -113,6 +127,7 @@ if ($method === 'POST') {
         }
 
         if (!empty($upload[2])) {
+            $body['evidence_file_id'] = $upload[2]['file_id'] ?? '';
             $body['evidence_file_name'] = $upload[2]['file_name'] ?? '';
             $body['evidence_file_path'] = $upload[2]['file_path'] ?? '';
             $body['evidence_file_type'] = $upload[2]['file_type'] ?? '';
@@ -269,23 +284,21 @@ function moderation_store_report_evidence(string $userId, mixed $fileInput): arr
         return [false, 'Invalid proof photo file type.', null];
     }
 
-    $uploadDir = __DIR__ . '/../uploads/reports/' . ($userId !== '' ? $userId : 'anonymous');
-    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
-        return [false, 'Failed to create report upload folder.', null];
-    }
+    $stored = learnloop_store_single_file($file, [
+        'context' => 'report_evidence',
+        'owner_id' => $userId,
+    ]);
 
-    $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($name));
-    $storedName = time() . '-' . bin2hex(random_bytes(4)) . '-' . $safeName;
-    $targetPath = $uploadDir . '/' . $storedName;
-
-    if (!move_uploaded_file($tmp, $targetPath)) {
-        return [false, 'Failed to save proof photo.', null];
+    if (!$stored[0]) {
+        return [false, $stored[1] ?: 'Failed to save proof photo.', null];
     }
 
     return [true, 'Proof photo uploaded.', [
-        'file_name' => $name,
-        'file_path' => 'uploads/reports/' . ($userId !== '' ? $userId : 'anonymous') . '/' . $storedName,
+        'file_id' => $stored[2]['file_id'],
+        'file_name' => $stored[2]['file_name'],
+        'file_path' => 'api/moderation.php?action=download_report_evidence&file_id=' . urlencode($stored[2]['file_id']),
         'file_type' => 'image',
-        'mime_type' => $mime,
+        'mime_type' => $stored[2]['mime_type'],
+        'file_size' => (int) $stored[2]['file_size'],
     ]];
 }

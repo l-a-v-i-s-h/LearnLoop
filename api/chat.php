@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/upload.php';
+require_once __DIR__ . '/../includes/file_store.php';
 require_once __DIR__ . '/../includes/moderation.php';
 
 header('Content-Type: application/json; charset=UTF-8');
@@ -37,6 +38,11 @@ if (in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
 }
 
 if ($requestMethod === 'GET') {
+	if (isset($_GET['action']) && $_GET['action'] === 'download') {
+		download_message_file($chatCollection);
+		exit;
+	}
+
 	get_messages($chatCollection);
 	exit;
 }
@@ -83,6 +89,7 @@ function get_messages(mixed $chatCollection): void
 
 	$messages = [];
 	foreach ($cursor as $doc) {
+		$fileId = (string) ($doc['file_id'] ?? '');
 		$messages[] = [
 			'message_id' => $doc['message_id'] ?? '',
 			'group' => $doc['group'] ?? '',
@@ -95,8 +102,9 @@ function get_messages(mixed $chatCollection): void
 			'note_group_id' => $doc['note_group_id'] ?? '',
 			'note_group_name' => $doc['note_group_name'] ?? '',
 			'note_visibility' => $doc['note_visibility'] ?? '',
+			'file_id' => $fileId,
 			'file_name' => $doc['file_name'] ?? '',
-			'file_path' => $doc['file_path'] ?? '',
+			'file_path' => $fileId !== '' ? 'api/chat.php?action=download&message_id=' . urlencode((string) ($doc['message_id'] ?? '')) : ($doc['file_path'] ?? ''),
 			'file_size' => (int) ($doc['file_size'] ?? 0),
 			'edited' => (bool) ($doc['edited'] ?? false),
 			'created_at' => format_mongo_date($doc['created_at'] ?? null)
@@ -146,6 +154,7 @@ function post_message(mixed $chatCollection): void
 	$type = 'text';
 	$fileName = '';
 	$filePath = '';
+	$fileId = '';
 	$fileSize = 0;
 
 	if (!empty($_FILES['file'])) {
@@ -170,31 +179,23 @@ function post_message(mixed $chatCollection): void
 			return;
 		}
 
-		$uploadDir = __DIR__ . '/../uploads/chat/' . $userId;
-		if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
-			http_response_code(500);
-			echo json_encode([
-				'success' => false,
-				'message' => 'Failed to create upload folder.'
-			]);
-			return;
-		}
-
 		$storedFiles = [];
 		foreach ($validFiles as $vf) {
-			$safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($vf['name']));
-			$storedName = time() . '-' . bin2hex(random_bytes(4)) . '-' . $safeName;
-			$targetPath = $uploadDir . '/' . $storedName;
+			$stored = learnloop_store_single_file($vf, [
+				'context' => 'chat',
+				'owner_id' => $userId,
+				'group' => $group,
+			]);
 
-			if (!move_uploaded_file($vf['tmp_name'], $targetPath)) {
-				$storedFiles[] = ['file' => $vf['name'], 'status' => 'failed_move'];
+			if (!$stored[0]) {
+				$storedFiles[] = ['file' => $vf['name'], 'status' => 'failed_store'];
 				continue;
 			}
 
 			$storedFiles[] = [
-				'file_name' => $vf['name'],
-				'file_path' => 'uploads/chat/' . $userId . '/' . $storedName,
-				'file_size' => (int) $vf['size']
+				'file_id' => $stored[2]['file_id'],
+				'file_name' => $stored[2]['file_name'],
+				'file_size' => (int) $stored[2]['file_size']
 			];
 		}
 
@@ -210,7 +211,7 @@ function post_message(mixed $chatCollection): void
 		// Insert a chat message for each stored file
 		$inserted = [];
 		foreach ($storedFiles as $sf) {
-			if (!is_array($sf) || empty($sf['file_path'])) {
+			if (!is_array($sf) || empty($sf['file_id'])) {
 				continue;
 			}
 
@@ -225,8 +226,8 @@ function post_message(mixed $chatCollection): void
 					'sender_name' => $senderName,
 					'type' => 'file',
 					'message' => '',
+					'file_id' => $sf['file_id'],
 					'file_name' => $sf['file_name'],
-					'file_path' => $sf['file_path'],
 					'file_size' => (int) ($sf['file_size'] ?? 0),
 					'edited' => false,
 					'created_at' => $now
@@ -234,8 +235,9 @@ function post_message(mixed $chatCollection): void
 
 				$inserted[] = [
 					'message_id' => $messageId,
+					'file_id' => $sf['file_id'],
 					'file_name' => $sf['file_name'],
-					'file_path' => $sf['file_path'],
+					'file_path' => 'api/chat.php?action=download&message_id=' . urlencode($messageId),
 					'file_size' => (int) ($sf['file_size'] ?? 0),
 					'created_at' => format_mongo_date($now)
 				];
@@ -247,18 +249,15 @@ function post_message(mixed $chatCollection): void
 					'sender_name' => $senderName,
 					'type' => 'file',
 					'message' => '',
+					'file_id' => $sf['file_id'],
 					'file_name' => $sf['file_name'],
-					'file_path' => $sf['file_path'],
+					'file_path' => 'api/chat.php?action=download&message_id=' . urlencode($messageId),
 					'file_size' => (int) ($sf['file_size'] ?? 0),
 					'edited' => false,
 					'created_at' => format_mongo_date($now)
 				]);
 			} catch (Exception $e) {
-				// if insert fails, try to unlink file to avoid orphaning
-				$path = __DIR__ . '/../' . ltrim($sf['file_path'], '/\\');
-				if (is_file($path)) {
-					@unlink($path);
-				}
+				learnloop_delete_stored_file($sf['file_id']);
 			}
 		}
 
@@ -300,6 +299,7 @@ function post_message(mixed $chatCollection): void
 			'type' => $type,
 			'message' => $messageText,
 			'file_name' => $fileName,
+			'file_id' => $fileId,
 			'file_path' => $filePath,
 			'file_size' => $fileSize,
 			'edited' => false,
@@ -314,6 +314,7 @@ function post_message(mixed $chatCollection): void
 			'type' => $type,
 			'message' => $messageText,
 			'file_name' => $fileName,
+			'file_id' => $fileId,
 			'file_path' => $filePath,
 			'file_size' => $fileSize,
 			'edited' => false,
@@ -339,6 +340,7 @@ function post_message(mixed $chatCollection): void
 			'type' => $type,
 			'message' => $messageText,
 			'file_name' => $fileName,
+			'file_id' => $fileId,
 			'file_path' => $filePath,
 			'file_size' => $fileSize,
 			'edited' => false,
@@ -425,6 +427,7 @@ function edit_message(mixed $chatCollection): void
 			'file_path' => $updated['file_path'] ?? '',
 			'file_size' => (int) ($updated['file_size'] ?? 0),
 			'edited' => (bool) ($updated['edited'] ?? true),
+			'file_id' => $updated['file_id'] ?? '',
 			'created_at' => format_mongo_date($updated['created_at'] ?? null)
 		]);
 	}
@@ -482,7 +485,9 @@ function delete_message(mixed $chatCollection): void
 		return;
 	}
 
-	if (!empty($message['file_path'])) {
+	if (!empty($message['file_id'])) {
+		learnloop_delete_stored_file((string) $message['file_id']);
+	} elseif (!empty($message['file_path']) && str_starts_with((string) $message['file_path'], 'uploads/')) {
 		$path = __DIR__ . '/../' . ltrim((string) $message['file_path'], '/\\');
 		if (is_file($path)) {
 			@unlink($path);
@@ -521,6 +526,48 @@ function delete_message(mixed $chatCollection): void
 		'success' => true,
 		'message' => 'Message deleted.'
 	]);
+}
+
+function download_message_file(mixed $chatCollection): void
+{
+	$messageId = clean_text($_GET['message_id'] ?? '');
+
+	if ($messageId === '') {
+		http_response_code(422);
+		echo json_encode([
+			'success' => false,
+			'message' => 'message_id is required.'
+		]);
+		return;
+	}
+
+	try {
+		$message = $chatCollection->findOne(['message_id' => $messageId]);
+	} catch (Exception $e) {
+		http_response_code(500);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Failed to download file.'
+		]);
+		return;
+	}
+
+	if (!$message || empty($message['file_id'])) {
+		http_response_code(404);
+		echo json_encode([
+			'success' => false,
+			'message' => 'File not found.'
+		]);
+		return;
+	}
+
+	if (!learnloop_stream_stored_file((string) $message['file_id'])) {
+		http_response_code(404);
+		echo json_encode([
+			'success' => false,
+			'message' => 'File not found.'
+		]);
+	}
 }
 
 function read_json_body(): array
