@@ -78,7 +78,6 @@ $dashboardActivities = $dashboardSnapshot['recent_activities'];
                         <span>Banned Users</span>
                     </a>
                     
-                    <a class="admin-nav-item" href="admin_settings.php">
                     <a class="admin-nav-item" href="profile.php">
                         <i class="fa-regular fa-user"></i>
                         <span>Account</span>
@@ -91,9 +90,6 @@ $dashboardActivities = $dashboardSnapshot['recent_activities'];
             <main class="admin-main">
                 <div class="admin-title-row">
                     <h1>Welcome, Admin</h1>
-                    <a class="admin-floating-bell" href="#" aria-label="Notifications">
-                        <i class="fa-regular fa-bell"></i>
-                    </a>
                 </div>
 
                 <section class="admin-stats" aria-label="Dashboard summary">

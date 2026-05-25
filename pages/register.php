@@ -61,12 +61,7 @@ unset($_SESSION['old_input']);
             
             <div class="input-group">
                 <label>Password</label>
-                <input 
-                    type="password" 
-                    name="password" 
-                    placeholder="••••••••" 
-                    required
-                >
+
                 <div class="password-field">
                     <input type="password" name="password" placeholder="••••••••" required>
                     <button type="button" class="password-toggle" aria-label="Show password" data-password-toggle data-password-label="password">
